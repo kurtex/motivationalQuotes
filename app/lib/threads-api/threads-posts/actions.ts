@@ -4,11 +4,10 @@ import apiClient from "../apiClient";
 import { EThreadsAuthEndpoints } from "../EThreadsEndpoints";
 
 /**
- * Creates a thread text container for the given Threads user ID.
+ * Creates a thread text container.
  *
- * @param threadsUserId The user ID of the Threads user.
- * @param access_token The access token to be used for the request.
  * @param postText The text to be posted in the thread.
+ * @param access_token The access token to be used for the request.
  * @returns The ID of the created thread container.
  * @throws An error if something was wrong.
  */
@@ -17,7 +16,7 @@ export const createThreadTextContainer = async (
 	access_token: string
 ) => {
 	try {
-		const response = await apiClient.post(
+		const response = await apiClient.post<MediaContainerResponse>(
 			EThreadsAuthEndpoints.NEW_TEXT_CONTAINER,
 			null,
 			{
@@ -29,26 +28,28 @@ export const createThreadTextContainer = async (
 			}
 		);
 
-		const containerId = response.data as MediaContainerResponse;
+		const containerId = response.data;
 
 		return containerId.id;
 	} catch (error) {
 		console.error("Error creating thread container:", error);
+		// Consider handling specific error types or status codes here in the future
 		throw error;
 	}
 };
 
 /**
- * Posts a threads text container for the given Threads user ID.
+ * Posts a threads text container.
  *
- * @param threadsUserId The user ID of the Threads user.
  * @param containerId The ID of the container to be posted.
+ * @param access_token The access token to be used for the request.
+ * @returns True if the post was successful.
  * @throws An error if something was wrong.
  */
 export const postThreadsTextContainer = async (
 	containerId: string,
 	access_token: string
-) => {
+): Promise<boolean> => {
 	try {
 		await apiClient.post(EThreadsAuthEndpoints.POST_TEXT_CONTAINER, null, {
 			params: {
@@ -56,8 +57,10 @@ export const postThreadsTextContainer = async (
 				access_token,
 			},
 		});
+		return true;
 	} catch (error) {
 		console.error("Error creating thread post:", error);
+		// Consider handling specific error types or status codes here in the future
 		throw error;
 	}
 };
@@ -68,7 +71,7 @@ export const postThreadsTextContainer = async (
  * @returns The access token for the Threads API.
  * @throws An error if the access token is not found.
  */
-async function getThreadsCookie() {
+export async function getThreadsCookie() {
 	const access_token = await getCookie("threads-token");
 	if (!access_token) {
 		throw new Error("Access token is required");

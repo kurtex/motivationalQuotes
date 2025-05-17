@@ -13,6 +13,16 @@ const eslintConfig = [
 	...compat.config({
 		extends: ["next", "prettier"],
 	}),
+	{
+		overrides: [
+			{
+				files: ["tests/**/*"],
+				env: {
+					jest: true,
+				},
+			},
+		],
+	},
 ];
 
 export default eslintConfig;
