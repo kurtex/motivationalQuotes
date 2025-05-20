@@ -2,6 +2,7 @@ import ThreadsLogin from "./components/ThreadsLogin";
 import { cronjob } from "./lib/utils/cronjob/cronjob";
 import HomeAuthenticated from "./components/HomeAuthenticated";
 import { getCookie } from "./lib/utils/cookies/actions";
+import GeminiQuoteGenerator from "./components/GeminiQuoteGenerator";
 
 /**
  * This is the main page of the application.
@@ -13,8 +14,8 @@ export default async function Home () {
   const access_token = await getCookie("threads-token");
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
-
+    <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-900 dark:to-gray-800">
+      <GeminiQuoteGenerator />
       {access_token && (
         <HomeAuthenticated access_token={access_token} />
       )}
