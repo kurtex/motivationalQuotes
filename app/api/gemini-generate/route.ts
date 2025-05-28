@@ -1,3 +1,5 @@
+import { saveGeminiQuote } from "@/app/lib/database/actions";
+import { getCookie } from "@/app/lib/utils/cookies/actions";
 import { NextRequest, NextResponse } from "next/server";
 
 export const runtime = "edge";
@@ -8,7 +10,6 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
 	}
 
-	// Gemini 2.0 Flash API endpoint and key (user must set this in env)
 	const GEMINI_API_URL =
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 	const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -37,5 +38,16 @@ export async function POST(req: NextRequest) {
 
 	const data = await response.json();
 	const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+	// Save quote to DB and associate with user
+	try {
+		const accessToken = await getCookie("threads-token");
+		if (accessToken && text) {
+			//await saveGeminiQuote(text, accessToken);
+		}
+	} catch (err) {
+		console.error("Failed to save quote:", err);
+	}
+
 	return NextResponse.json({ text });
 }

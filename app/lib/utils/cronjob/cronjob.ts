@@ -1,7 +1,7 @@
 import { refreshLongLivedToken } from "../../threads-api/auth-tokens/actions";
-import TokenModel from "../../database/models/Token";
 import { connectToDB } from "../../database/db";
 import cron from "node-cron";
+import Token from "../../database/models/Token";
 
 // 1 day in seconds
 const ONE_DAY_SECONDS = 86400;
@@ -9,7 +9,7 @@ const ONE_DAY_SECONDS = 86400;
 // each hour
 export const cronjob = cron.schedule("0 * * * *", async () => {
 	await connectToDB();
-	const tokens = await TokenModel.find();
+	const tokens = await Token.find();
 	const now = Math.floor(Date.now() / 1000);
 
 	for (const token of tokens) {

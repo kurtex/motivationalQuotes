@@ -5,7 +5,12 @@ import {
 	getShortLivedToken,
 } from "@/app/lib/threads-api/auth-tokens/actions";
 import { NextResponse } from "next/server";
-import { saveThreadsToken } from "@/app/lib/database/actions";
+import {
+	saveThreadsToken,
+	updateThreadsToken,
+} from "@/app/lib/database/actions";
+import User from "@/app/lib/database/models/User";
+import { connectToDB } from "@/app/lib/database/db";
 
 export async function POST(request: Request) {
 	const { code } = await request.json();
@@ -27,12 +32,49 @@ export async function POST(request: Request) {
 		let token;
 
 		try {
-			// Save the long-lived token to the database.
-			token = await saveThreadsToken(
-				shortLiveToken.user_id,
-				longLivedToken.access_token,
-				longLivedToken.expires_in
-			);
+			const metaUserId = shortLiveToken.user_id;
+
+			if (!metaUserId) {
+				throw new Error("Meta user ID is required");
+			}
+
+			const accessToken = longLivedToken.access_token;
+
+			if (!accessToken) {
+				throw new Error("Access token is required");
+			}
+
+			const expiresIn = longLivedToken.expires_in;
+
+			if (!expiresIn) {
+				throw new Error("Expiration time is required");
+			}
+
+			await connectToDB();
+
+			// Check if the user already exists in the database.
+			const existingUser = await User.findOne({
+				meta_user_id: metaUserId,
+			});
+
+			if (existingUser) {
+				token = await updateThreadsToken(
+					metaUserId,
+					longLivedToken.access_token,
+					longLivedToken.expires_in
+				);
+			} else {
+				await User.create({
+					meta_user_id: metaUserId,
+				});
+
+				// Save the long-lived token to the database.
+				token = await saveThreadsToken(
+					metaUserId,
+					longLivedToken.access_token,
+					longLivedToken.expires_in
+				);
+			}
 		} catch (error) {
 			return NextResponse.json({
 				error: "There was an error logging in to Threads",
@@ -58,7 +100,11 @@ export async function POST(request: Request) {
 		// Note: The cookie is set to expire after 60 days.
 		response.headers.append(
 			"Set-Cookie",
-			`threads-token=${token.access_token}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${token.expires_in};`
+			`threads-token=${
+				token!.access_token
+			}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${
+				token!.expires_in
+			};`
 		);
 
 		return response;

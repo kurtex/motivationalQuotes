@@ -1,9 +1,10 @@
 "use server";
 
-import { Types } from "mongoose";
 import { connectToDB } from "./db";
-import TokenModel, { IToken } from "./models/Token";
+
 import User from "./models/User";
+import Quote from "./models/Quote";
+import Token, { IToken } from "./models/Token";
 
 /**
  * Saves a Threads token to the database.
@@ -18,51 +19,36 @@ export async function saveThreadsToken(
 	accessToken: string,
 	expiresIn: number
 ): Promise<IToken> {
-	if (!metaUserId) {
-		throw new Error("Meta user ID is required");
-	}
-	if (!accessToken) {
-		throw new Error("Access token is required");
-	}
-	if (!expiresIn) {
-		throw new Error("Expiration time is required");
-	}
-
 	await connectToDB();
 	const now = Math.floor(Date.now() / 1000);
 
-	const user = await User.findOne({ meta_id: metaUserId });
-	let token: IToken | null = null;
+	const token: IToken = await saveToken(
+		metaUserId,
+		accessToken,
+		now,
+		expiresIn
+	);
 
-	if (user) {
-		token = await TokenModel.findOne({ user_id: user.meta_id });
+	return token!;
+}
 
-		if (!token) {
-			return await createThreadsToken(
-				user.meta_id,
-				accessToken,
-				now,
-				expiresIn
-			);
-		}
+export async function updateThreadsToken(
+	metaUserId: string,
+	accessToken: string,
+	expiresIn: number
+): Promise<IToken> {
+	await connectToDB();
+	const now = Math.floor(Date.now() / 1000);
 
-		token = await TokenModel.findOneAndUpdate(
-			{ user_id: user.meta_id },
-			{
-				access_token: accessToken,
-				last_updated: now,
-				expires_in: expiresIn,
-			},
-			{ new: true } // This option ensures the updated document is returned
-		);
-	} else {
-		await User.create({
-			user_id: new Types.ObjectId(),
-			meta_id: metaUserId,
-		});
-
-		token = await createThreadsToken(metaUserId, accessToken, now, expiresIn);
-	}
+	const token: IToken | null = await Token.findOneAndUpdate(
+		{ user_id: metaUserId },
+		{
+			access_token: accessToken,
+			last_updated: now,
+			expires_in: expiresIn,
+		},
+		{ new: true } // This option ensures the updated document is returned
+	);
 
 	return token!;
 }
@@ -77,13 +63,13 @@ export async function saveThreadsToken(
  * @param expiresIn
  * @returns
  */
-async function createThreadsToken(
+async function saveToken(
 	metaUserId: string,
 	accessToken: string,
 	now: number,
 	expiresIn: number
 ): Promise<IToken> {
-	const token = await TokenModel.create({
+	const token = await Token.create({
 		user_id: metaUserId,
 		access_token: accessToken,
 		last_updated: now,
@@ -106,11 +92,28 @@ export async function getMetaUserIdByThreadsAccessToken(
 ): Promise<string> {
 	await connectToDB();
 
-	const token = await TokenModel.findOne({ access_token: accessToken });
+	const token = await Token.findOne({ access_token: accessToken });
 
 	if (!token) {
 		throw new Error("Token not found");
 	}
 
 	return token.user_id;
+}
+
+/**
+ * Save a generated quote to the database and associate it with a user.
+ * @param text The quote text
+ * @param accessToken The user's Threads access token
+ * @returns The saved quote document
+ */
+export async function saveGeminiQuote(text: string, accessToken: string) {
+	// Find user by access token
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(accessToken);
+	await connectToDB();
+	const user = await User.findOne({ meta_user_id: metaUserId });
+	if (!user) throw new Error("User not found");
+	// Save quote
+	const quote = await Quote.create({ text, user: user._id });
+	return quote;
 }

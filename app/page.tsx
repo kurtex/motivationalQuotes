@@ -15,9 +15,11 @@ export default async function Home () {
 
   return (
     <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-900 dark:to-gray-800">
-      <GeminiQuoteGenerator />
       {access_token && (
-        <HomeAuthenticated access_token={access_token} />
+        <>
+          <GeminiQuoteGenerator />
+          <HomeAuthenticated access_token={access_token} />
+        </>
       )}
       {!access_token && (
         <ThreadsLogin />

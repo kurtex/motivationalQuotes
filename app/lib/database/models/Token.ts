@@ -1,4 +1,4 @@
-import mongoose, { ObjectId, Schema, Document, Types } from "mongoose";
+import mongoose, { ObjectId, Schema, Document } from "mongoose";
 
 /**
  * Interface representing a Threads API token document
@@ -33,7 +33,7 @@ const TokenSchema: Schema = new Schema({
  * It also ensures that the model is only created once, preventing multiple instances.
  * @type {mongoose.Model<IToken>}
  */
-const TokenModel =
+const Token =
 	mongoose.models.Token || mongoose.model<IToken>("Token", TokenSchema);
 
-export default TokenModel;
+export default Token;
