@@ -1,15 +1,10 @@
 import { saveGeminiQuote } from "@/app/lib/database/actions";
 import { getCookie } from "@/app/lib/utils/cookies/actions";
 import { NextRequest, NextResponse } from "next/server";
-
-export const runtime = "edge";
+import { getGeminiQuotes } from "@/app/lib/database/actions";
+import { IQuote } from "@/app/lib/database/models/Quote";
 
 export async function POST(req: NextRequest) {
-	const { prompt } = await req.json();
-	if (!prompt) {
-		return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
-	}
-
 	const GEMINI_API_URL =
 		"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
 	const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -20,6 +15,20 @@ export async function POST(req: NextRequest) {
 			{ status: 500 }
 		);
 	}
+
+	const accessToken = await getCookie("threads-token");
+	if (!accessToken) {
+		return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+	}
+	const quotes = await getGeminiQuotes(accessToken);
+
+	let prompt = `Generate a short, original motivational quote. 
+                    The language must be Spanish. 
+                    Return only the motivational quote in Spanish, no english.
+                    Try to return a new quote each time.
+					Avoid using these quotes: ${quotes
+						.map((q: IQuote) => `"${q.text}"`)
+						.join(", ")}`;
 
 	const body = {
 		contents: [{ parts: [{ text: prompt }] }],
@@ -43,7 +52,7 @@ export async function POST(req: NextRequest) {
 	try {
 		const accessToken = await getCookie("threads-token");
 		if (accessToken && text) {
-			//await saveGeminiQuote(text, accessToken);
+			await saveGeminiQuote(text, accessToken);
 		}
 	} catch (err) {
 		console.error("Failed to save quote:", err);

@@ -15,12 +15,8 @@ function GeminiQuoteGenerator () {
             const res = await fetch('/api/gemini-generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: `Generate a short, original motivational quote. 
-                    The language must be Spanish. 
-                    Return only the motivational quote in Spanish, no english.
-                    Try to return a new quote each time.` })
             });
+
             const data = await res.json();
             if (data.text) setQuote(data.text);
             else setError(data.error || 'No quote generated');
@@ -32,7 +28,7 @@ function GeminiQuoteGenerator () {
     };
 
     return (
-        <div className="flex justify-center items-center">
+        <div className="flex justify-center items-center flex-col gap-2.5">
             <button
                 className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-lg shadow hover:from-blue-600 hover:to-purple-600 transition"
                 onClick={generateQuote}

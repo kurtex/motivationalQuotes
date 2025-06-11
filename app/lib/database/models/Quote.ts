@@ -8,7 +8,7 @@ export interface IQuote extends Document {
 
 const QuoteSchema = new Schema<IQuote>({
 	text: { type: String, required: true },
-	user: { type: Schema.Types.ObjectId, ref: "User", required: true },
+	user: { type: Schema.Types.ObjectId, required: true },
 	createdAt: { type: Date, default: Date.now },
 });
 

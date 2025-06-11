@@ -1,7 +1,6 @@
 import { getThreadsUsername } from '../lib/threads-api/user-data/actions';
 import { createThreadTextContainer, postThreadsTextContainer } from '../lib/threads-api/threads-posts/actions';
 import { connectToDB } from '../lib/database/db';
-import { getMetaUserIdByThreadsAccessToken } from '../lib/database/actions';
 import { getCookie } from '../lib/utils/cookies/actions';
 
 /**
