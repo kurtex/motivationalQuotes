@@ -1,10 +1,12 @@
 "use server";
 
 import { connectToDB } from "./db";
-
-import User from "./models/User";
-import Quote from "./models/Quote";
+import Quote, { IQuote } from "./models/Quote";
 import Token, { IToken } from "./models/Token";
+import User from "./models/User";
+import crypto from "crypto";
+import { GeminiClient } from "../ai/geminiClient";
+import { GeminiModel } from "../ai/geminiModels";
 
 /**
  * Saves a Threads token to the database.
@@ -81,6 +83,62 @@ async function saveToken(
 }
 
 /**
+ * Save a generated quote to the database and associate it with a user.
+ * @param text The quote text
+ * @param threadsAccessToken The user's Threads access token
+ * @returns The saved quote document
+ */
+export async function saveGeminiQuote(
+	text: string,
+	threadsAccessToken: string
+): Promise<string> {
+	// Find user by access token
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(
+		threadsAccessToken
+	);
+
+	const user = await User.findOne({ meta_user_id: metaUserId });
+	if (!user) throw new Error("User not found");
+
+	// Hash deduplication
+	const hash = crypto.createHash("sha256").update(text).digest("hex");
+	const existing = await Quote.findOne({ hash, user: user._id });
+	if (existing) throw new Error("Duplicate quote detected (hash)");
+
+	// Embedding deduplication using Gemini embedding model
+	const geminiEmbeddingClient = new GeminiClient(
+		GeminiModel.GEMINI_EMBEDDING_EXP_03_07
+	);
+
+	const embedding = await geminiEmbeddingClient.embedContent(text); // Should return number[]
+	const userQuotes = await Quote.find({ user: user._id });
+	const isNearDuplicate = userQuotes.some(
+		(q) => cosineSimilarity(q.embedding, embedding) > 0.85
+	);
+
+	if (isNearDuplicate)
+		throw new Error("Near-duplicate quote detected (embedding)");
+
+	// Save quote
+	const quote: IQuote = await Quote.create({
+		text,
+		hash,
+		embedding,
+		user: user._id,
+	});
+
+	return quote.text;
+}
+
+// Helper for cosine similarity
+function cosineSimilarity(a: number[], b: number[]): number {
+	const dot = a.reduce((sum, ai, i) => sum + ai * b[i], 0);
+	const normA = Math.sqrt(a.reduce((sum, ai) => sum + ai * ai, 0));
+	const normB = Math.sqrt(b.reduce((sum, bi) => sum + bi * bi, 0));
+	return dot / (normA * normB);
+}
+
+/**
  * Retrieves the Threads user ID associated with a given access token.
  *
  * @param accessToken - The access token for the Threads API.
@@ -92,7 +150,9 @@ export async function getMetaUserIdByThreadsAccessToken(
 ): Promise<string> {
 	await connectToDB();
 
-	const token = await Token.findOne({ access_token: accessToken });
+	const token: IToken | null = await Token.findOne({
+		access_token: accessToken,
+	});
 
 	if (!token) {
 		throw new Error("Token not found");
@@ -103,17 +163,41 @@ export async function getMetaUserIdByThreadsAccessToken(
 
 /**
  * Save a generated quote to the database and associate it with a user.
- * @param text The quote text
- * @param accessToken The user's Threads access token
+ * If the quote is a duplicate or near-duplicate, it will retry up to maxRetries times.
+ * @param threadsAccessToken The user's Threads access token
+ * @param prompt The prompt to use for Gemini
+ * @param maxRetries Maximum number of attempts to get a unique quote
  * @returns The saved quote document
  */
-export async function saveGeminiQuote(text: string, accessToken: string) {
-	// Find user by access token
-	const metaUserId = await getMetaUserIdByThreadsAccessToken(accessToken);
-	await connectToDB();
-	const user = await User.findOne({ meta_user_id: metaUserId });
-	if (!user) throw new Error("User not found");
-	// Save quote
-	const quote = await Quote.create({ text, user: user._id });
-	return quote;
+export async function saveUniqueGeminiQuote(
+	threadsAccessToken: string,
+	prompt: string,
+	maxRetries = 5
+): Promise<string> {
+	const geminiTextClient = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
+	let lastError = null;
+	for (let attempt = 0; attempt < maxRetries; attempt++) {
+		const text = await geminiTextClient.generateContent(prompt);
+		try {
+			// Reuse the deduplication and save logic
+			return await saveGeminiQuote(text, threadsAccessToken);
+		} catch (err: any) {
+			lastError = err;
+			// Only retry on deduplication errors
+			if (
+				err.message?.includes("Duplicate quote detected") ||
+				err.message?.includes("Near-duplicate quote detected")
+			) {
+				continue;
+			} else {
+				throw err;
+			}
+		}
+	}
+
+	throw new Error(
+		`No unique quote could be generated after ${maxRetries} attempts. Last error: ${
+			lastError?.message || lastError
+		}`
+	);
 }

@@ -1,4 +1,4 @@
-import mongoose, { ObjectId, Schema, Document } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
 /**
  * Interface representing a Threads API token document
@@ -7,7 +7,7 @@ import mongoose, { ObjectId, Schema, Document } from "mongoose";
  */
 export interface IToken extends Document {
 	/** The unique identifier of the user this token belongs to */
-	user_id: ObjectId;
+	user_id: string;
 	/** The actual access token string used for API authentication */
 	access_token: string;
 	/** Unix timestamp (in seconds) of the last token update or refresh */

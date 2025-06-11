@@ -1,17 +1,16 @@
 import { getThreadsUsername } from '../lib/threads-api/user-data/actions';
 import { createThreadTextContainer, postThreadsTextContainer } from '../lib/threads-api/threads-posts/actions';
 import { connectToDB } from '../lib/database/db';
-import { getMetaUserIdByThreadsAccessToken } from '../lib/database/actions';
 import { getCookie } from '../lib/utils/cookies/actions';
 
 /**
  * The props for the HomeAuthenticated component.
  */
 interface HomeAuthenticatedProps {
-    access_token: string; // The access token for the authenticated user
+    accessToken: string; // The access token for the authenticated user
 }
 
-const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = async ({ access_token }) => {
+const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = async ({ accessToken: access_token }) => {
     const username = await getThreadsUsername(access_token);
 
     // Server Action for posting a thread

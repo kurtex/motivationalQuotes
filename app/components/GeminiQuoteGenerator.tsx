@@ -2,7 +2,11 @@
 
 import { useState } from 'react';
 
-function GeminiQuoteGenerator () {
+interface GeminiQuoteGeneratorProps {
+    accessToken: string;
+}
+
+function GeminiQuoteGenerator ({ accessToken }: GeminiQuoteGeneratorProps) {
     const [quote, setQuote] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -11,18 +15,16 @@ function GeminiQuoteGenerator () {
         setLoading(true);
         setError('');
         setQuote('');
+
         try {
             const res = await fetch('/api/gemini-generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    prompt: `Generate a short, original motivational quote. 
-                    The language must be Spanish. 
-                    Return only the motivational quote in Spanish, no english.
-                    Try to return a new quote each time.` })
+                body: JSON.stringify({ accessToken }),
             });
+
             const data = await res.json();
-            if (data.text) setQuote(data.text);
+            if (data.quoteText) setQuote(data.quoteText);
             else setError(data.error || 'No quote generated');
         } catch (e) {
             setError('Failed to generate quote');
@@ -32,7 +34,7 @@ function GeminiQuoteGenerator () {
     };
 
     return (
-        <div className="flex justify-center items-center">
+        <div className="flex justify-center items-center flex-col gap-2.5">
             <button
                 className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-2 rounded-lg shadow hover:from-blue-600 hover:to-purple-600 transition"
                 onClick={generateQuote}
