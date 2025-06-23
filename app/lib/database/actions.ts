@@ -111,7 +111,9 @@ export async function saveGeminiQuote(
 	);
 
 	const embedding = await geminiEmbeddingClient.embedContent(text); // Should return number[]
-	const userQuotes = await Quote.find({ user: user._id });
+	const userQuotes = await Quote.find({ user: user._id })
+		.sort({ createdAt: -1 })
+		.limit(50);
 	const isNearDuplicate = userQuotes.some(
 		(q) => cosineSimilarity(q.embedding, embedding) > 0.85
 	);
@@ -176,8 +178,17 @@ export async function saveUniqueGeminiQuote(
 ): Promise<string> {
 	const geminiTextClient = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
 	let lastError = null;
+	const failedQuotes: string[] = [];
+	let currentPrompt = prompt;
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		const text = await geminiTextClient.generateContent(prompt);
+		// Si hay frases fallidas, añádelas al prompt
+		if (failedQuotes.length > 0) {
+			currentPrompt =
+				prompt +
+				"\nDo NOT repeat or generate anything similar to these quotes:" +
+				failedQuotes.map((q) => `\n- \"${q}\"`).join("");
+		}
+		const text = await geminiTextClient.generateContent(currentPrompt);
 		try {
 			// Reuse the deduplication and save logic
 			return await saveGeminiQuote(text, threadsAccessToken);
@@ -188,6 +199,7 @@ export async function saveUniqueGeminiQuote(
 				err.message?.includes("Duplicate quote detected") ||
 				err.message?.includes("Near-duplicate quote detected")
 			) {
+				failedQuotes.push(text);
 				continue;
 			} else {
 				throw err;

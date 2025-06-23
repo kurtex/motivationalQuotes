@@ -78,3 +78,27 @@ export async function getThreadsCookie() {
 	}
 	return access_token;
 }
+
+/**
+ * Server Action for posting a thread from the client component.
+ * @param formData FormData containing the thread_post
+ */
+export async function postThreadAction(formData: FormData) {
+	const content = formData.get("thread_post") as string;
+
+	try {
+		const access_token = await getCookie("threads-token");
+		if (!access_token) {
+			throw new Error("Access token is required");
+		}
+		const threadsContainerId = await createThreadTextContainer(
+			content,
+			access_token
+		);
+		await new Promise((resolve) => setTimeout(resolve, 3000));
+		await postThreadsTextContainer(threadsContainerId, access_token);
+	} catch (error) {
+		console.error("Error creating thread post:", error);
+		throw error;
+	}
+}

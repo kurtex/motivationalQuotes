@@ -4,9 +4,10 @@ import { useState } from 'react';
 
 interface GeminiQuoteGeneratorProps {
     accessToken: string;
+    onQuoteGenerated?: (quote: string) => void;
 }
 
-function GeminiQuoteGenerator ({ accessToken }: GeminiQuoteGeneratorProps) {
+function GeminiQuoteGenerator ({ accessToken, onQuoteGenerated }: GeminiQuoteGeneratorProps) {
     const [quote, setQuote] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -20,12 +21,14 @@ function GeminiQuoteGenerator ({ accessToken }: GeminiQuoteGeneratorProps) {
             const res = await fetch('/api/gemini-generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessToken }),
+                body: JSON.stringify({ accessToken, lastQuote: quote }),
             });
 
             const data = await res.json();
-            if (data.quoteText) setQuote(data.quoteText);
-            else setError(data.error || 'No quote generated');
+            if (data.quoteText) {
+                setQuote(data.quoteText);
+                if (onQuoteGenerated) onQuoteGenerated(data.quoteText);
+            } else setError(data.error);
         } catch (e) {
             setError('Failed to generate quote');
         } finally {
@@ -42,11 +45,6 @@ function GeminiQuoteGenerator ({ accessToken }: GeminiQuoteGeneratorProps) {
             >
                 {loading ? 'Generating...' : 'Generate Motivational Quote'}
             </button>
-            {quote && (
-                <div className="bg-white dark:bg-gray-900 border border-blue-200 dark:border-blue-700 rounded-xl p-4 shadow text-lg max-w-xl text-center">
-                    {quote}
-                </div>
-            )}
             {error && <div className="text-red-500">{error}</div>}
         </div>
     );
