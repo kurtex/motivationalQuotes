@@ -1,8 +1,7 @@
 import ThreadsLogin from "./components/ThreadsLogin";
-import { cronjob } from "./lib/utils/cronjob/cronjob";
 import HomeAuthenticated from "./components/HomeAuthenticated";
 import { getCookie } from "./lib/utils/cookies/actions";
-import GeminiQuoteGenerator from "./components/GeminiQuoteGenerator";
+
 
 /**
  * This is the main page of the application.
@@ -10,7 +9,6 @@ import GeminiQuoteGenerator from "./components/GeminiQuoteGenerator";
  * or a message if the user is authenticated.
  */
 export default async function Home () {
-  cronjob.start();
   const access_token = await getCookie("threads-token");
 
   return (

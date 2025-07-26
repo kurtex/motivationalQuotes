@@ -1,13 +1,12 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 
 interface GeminiQuoteGeneratorProps {
-    accessToken: string;
     onQuoteGenerated?: (quote: string) => void;
 }
 
-function GeminiQuoteGenerator ({ accessToken, onQuoteGenerated }: GeminiQuoteGeneratorProps) {
+function GeminiQuoteGenerator ({ onQuoteGenerated }: GeminiQuoteGeneratorProps) {
     const [quote, setQuote] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -21,7 +20,7 @@ function GeminiQuoteGenerator ({ accessToken, onQuoteGenerated }: GeminiQuoteGen
             const res = await fetch('/api/gemini-generate', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ accessToken, lastQuote: quote }),
+                body: JSON.stringify({ lastQuote: quote }),
             });
 
             const data = await res.json();

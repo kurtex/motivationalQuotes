@@ -167,27 +167,30 @@ export async function getMetaUserIdByThreadsAccessToken(
  * Save a generated quote to the database and associate it with a user.
  * If the quote is a duplicate or near-duplicate, it will retry up to maxRetries times.
  * @param threadsAccessToken The user's Threads access token
- * @param prompt The prompt to use for Gemini
+ * @param quotesToAvoid A list of quotes to avoid generating duplicates of.
  * @param maxRetries Maximum number of attempts to get a unique quote
  * @returns The saved quote document
  */
 export async function saveUniqueGeminiQuote(
 	threadsAccessToken: string,
-	prompt: string,
+	quotesToAvoid: string[],
 	maxRetries = 5
 ): Promise<string> {
 	const geminiTextClient = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
 	let lastError = null;
-	const failedQuotes: string[] = [];
-	let currentPrompt = prompt;
+
+	// Base prompt with clear instructions
+	const basePrompt = `Generate a short, original motivational quote in Spanish. Return only the quote itself.`
+
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
-		// Si hay frases fallidas, añádelas al prompt
-		if (failedQuotes.length > 0) {
-			currentPrompt =
-				prompt +
-				"\nDo NOT repeat or generate anything similar to these quotes:" +
-				failedQuotes.map((q) => `\n- \"${q}\"`).join("");
+		let currentPrompt = basePrompt;
+
+		// Securely add quotes to avoid, clearly separating them from the main instruction
+		if (quotesToAvoid.length > 0) {
+			currentPrompt += `\n\nDo NOT generate any of the following quotes or anything similar:\n` +
+			quotesToAvoid.map(q => `- "${q}"`).join('\n');
 		}
+
 		const text = await geminiTextClient.generateContent(currentPrompt);
 		try {
 			// Reuse the deduplication and save logic
@@ -199,7 +202,10 @@ export async function saveUniqueGeminiQuote(
 				err.message?.includes("Duplicate quote detected") ||
 				err.message?.includes("Near-duplicate quote detected")
 			) {
-				failedQuotes.push(text);
+				// Add the failed quote to the list to avoid in the next attempt
+				if (!quotesToAvoid.includes(text)) {
+					quotesToAvoid.push(text);
+				}
 				continue;
 			} else {
 				throw err;

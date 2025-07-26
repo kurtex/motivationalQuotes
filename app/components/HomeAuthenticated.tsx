@@ -55,7 +55,7 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken }) =>
             </span>
             <div className="w-full bg-gray-50 dark:bg-gray-800 rounded-xl p-4 flex flex-col gap-4 justify-center items-center shadow-inner">
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2">Write a Thread</h3>
-                <GeminiQuoteGenerator accessToken={accessToken} onQuoteGenerated={handleQuoteGenerated} />
+                <GeminiQuoteGenerator onQuoteGenerated={handleQuoteGenerated} />
                 <form action={async (formData) => {
                     await postThreadAction(formData);
                     setQuote("");
