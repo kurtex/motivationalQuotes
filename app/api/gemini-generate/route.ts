@@ -18,11 +18,11 @@ export async function POST(req: NextRequest) {
 		const metaUserId = await getMetaUserIdByThreadsAccessToken(
 			accessTokenCookie
 		);
-		// Buscar el usuario en la base de datos
+		// Find the user in the database
 		const user = await User.findOne({ meta_user_id: metaUserId });
 		let recentQuotes: string[] = [];
 		if (user) {
-			// Buscar las últimas 30 frases del usuario
+			// Find the last 30 quotes from the user
 			const quotes = await Quote.find({ user: user._id })
 				.sort({ createdAt: -1 })
 				.limit(30)
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 			recentQuotes = quotes.map((q: any) => q.text);
 		}
 
-		// Si no hay frases recientes, pero se pasó la última, usarla
+		// If there are no recent quotes, but the last one was passed, use it
 		if (recentQuotes.length === 0 && lastQuote) {
 			recentQuotes.push(lastQuote);
 		}

@@ -7,7 +7,7 @@ import { GeminiModel, GeminiModelSpecialization } from "./geminiModels";
  *
  * Example usage:
  *   const client = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
- *   const text = await client.generateContent('Dame una frase motivacional');
+ *   const text = await client.generateContent('Give me a motivational quote');
  *
  *   const embedClient = new GeminiClient(GeminiModel.GEMINI_EMBEDDING_EXP_03_07);
  *   const embedding = await embedClient.embedContent('Texto a vectorizar');

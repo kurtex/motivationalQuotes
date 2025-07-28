@@ -1,104 +1,104 @@
-# Generador de Frases Motivacionales
+# Motivational Quote Generator
 
-[![Estado del Workflow](https://github.com/tu_usuario/tu_repositorio/actions/workflows/refresh_tokens.yml/badge.svg)](https://github.com/tu_usuario/tu_repositorio/actions/workflows/refresh_tokens.yml)
+[![Workflow Status](https://github.com/your_user/your_repository/actions/workflows/refresh_tokens.yml/badge.svg)](https://github.com/your_user/your_repository/actions/workflows/refresh_tokens.yml)
 
-Una aplicación web moderna construida con Next.js que genera frases motivacionales únicas en español utilizando la API de Google Gemini. Incluye autenticación de usuarios a través de la API de Threads y un sistema automatizado para la gestión de tokens.
+A modern web application built with Next.js that generates unique motivational quotes in Spanish using the Google Gemini API. It includes user authentication through the Threads API and an automated system for token management.
 
-## ✨ Características Principales
+## ✨ Key Features
 
-- **Generación de Contenido con IA:** Crea frases motivacionales originales y de alta calidad.
-- **Autenticación Social:** Integración segura con la API de Threads para el registro y login de usuarios.
-- **Base de Datos Persistente:** Almacena usuarios y frases generadas en MongoDB.
-- **Gestión Automatizada de Tokens:** Un sistema robusto que refresca automáticamente los tokens de la API de Threads para mantener la sesión del usuario activa.
-- **Despliegue Sencillo:** Optimizado para un despliegue fácil en plataformas como Vercel.
+- **AI Content Generation:** Creates original, high-quality motivational quotes.
+- **Social Authentication:** Secure integration with the Threads API for user registration and login.
+- **Persistent Database:** Stores users and generated quotes in MongoDB.
+- **Automated Token Management:** A robust system that automatically refreshes Threads API tokens to keep user sessions active.
+- **Easy Deployment:** Optimized for easy deployment on platforms like Vercel.
 
-## 🛠️ Stack Tecnológico
+## 🛠️ Tech Stack
 
 - **Framework:** [Next.js](https://nextjs.org/) (React)
-- **Lenguaje:** [TypeScript](https://www.typescriptlang.org/)
-- **Base de Datos:** [MongoDB](https://www.mongodb.com/) con [Mongoose](https://mongoosejs.com/)
-- **APIs Externas:**
+- **Language:** [TypeScript](https://www.typescriptlang.org/)
+- **Database:** [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
+- **External APIs:**
   - [Google Gemini API](https://ai.google.dev/)
   - [Threads API](https://developers.facebook.com/docs/threads)
-- **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
-- **Pruebas:** [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
-- **Automatización:** [GitHub Actions](https://github.com/features/actions)
+- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
+- **Testing:** [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
+- **Automation:** [GitHub Actions](https://github.com/features/actions)
 
 ---
 
-## 🚀 Empezando
+## 🚀 Getting Started
 
-Sigue estos pasos para configurar y ejecutar el proyecto en tu entorno local.
+Follow these steps to set up and run the project in your local environment.
 
-### Requisitos Previos
+### Prerequisites
 
-- [Node.js](https://nodejs.org/) (versión 18 o superior)
-- [pnpm](https://pnpm.io/) (recomendado), npm o yarn
-- Una instancia de [MongoDB](https://www.mongodb.com/try/download/community) (local o en la nube)
+- [Node.js](https://nodejs.org/) (version 18 or higher)
+- [pnpm](https://pnpm.io/) (recommended), npm, or yarn
+- A [MongoDB](https://www.mongodb.com/try/download/community) instance (local or cloud)
 
-### 1. Clonar el Repositorio
+### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/tu_usuario/tu_repositorio.git
+git clone https://github.com/your_user/your_repository.git
 cd motivational-quotes
 ```
 
-### 2. Instalar Dependencias
+### 2. Install Dependencies
 
 ```bash
 pnpm install
 ```
 
-### 3. Configurar Variables de Entorno
+### 3. Configure Environment Variables
 
-Crea un fichero `.env` en la raíz del proyecto y añade las siguientes variables. Puedes usar el fichero `.env.example` como guía si existe.
+Create a `.env` file in the project root and add the following variables. You can use the `.env.example` file as a guide if it exists.
 
 ```env
-# Clave de la API de Google Gemini
-GEMINI_API_KEY="TU_CLAVE_DE_GEMINI"
+# Google Gemini API Key
+GEMINI_API_KEY="YOUR_GEMINI_KEY"
 
-# URI de conexión a tu base de datos MongoDB
+# Connection URI for your MongoDB database
 MONGO_URI="mongodb://localhost:27017/database_name"
 
-# Secreto para proteger el endpoint del cron job
-CRON_SECRET="UN_SECRETO_FUERTE_Y_ALEATORIO"
+# Secret to protect the cron job endpoint
+CRON_SECRET="A_STRONG_AND_RANDOM_SECRET"
 ```
 
-### 4. Ejecutar la Aplicación
+### 4. Run the Application
 
 ```bash
 pnpm dev
 ```
 
-La aplicación estará disponible en [http://localhost:3000](http://localhost:3000).
+The application will be available at [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## ⚙️ Tareas Automatizadas (Cron Job)
+## ⚙️ Automated Tasks (Cron Job)
 
-La aplicación utiliza un sistema de cron job para refrescar automáticamente los tokens de acceso de la API de Threads, que caducan cada 60 días.
+The application uses a cron job system to automatically refresh Threads API access tokens, which expire every 60 days.
 
-Este proceso es gestionado por una **GitHub Action** definida en `.github/workflows/refresh_tokens.yml`.
+This process is managed by a **GitHub Action** defined in `.github/workflows/refresh_tokens.yml`.
 
-La GitHub Action se ejecuta diariamente y llama de forma segura al endpoint `POST /api/threads/refresh-tokens` para refrescar los tokens que estén a punto de expirar.
+The GitHub Action runs daily and securely calls the `POST /api/threads/refresh-tokens` endpoint to refresh tokens that are about to expire.
 
-### Configuración para Producción
+### Production Configuration
 
-Para que la GitHub Action funcione correctamente en tu repositorio, debes configurar los siguientes **Secrets** en la sección `Settings > Secrets and variables > Actions` de tu repositorio:
+For the GitHub Action to work correctly in your repository, you must configure the following **Secrets** in the `Settings > Secrets and variables > Actions` section of your repository:
 
-- `PRODUCTION_URL`: La URL base de tu aplicación en producción (ej. `https://mi-app.vercel.app`).
-- `CRON_SECRET`: El mismo valor que usaste en tu fichero `.env`.
+- `PRODUCTION_URL`: The base URL of your application in production (e.g., `https://my-app.vercel.app`).
+- `CRON_SECRET`: The same value you used in your `.env` file.
 
 ---
 
-## 🚢 Despliegue
+## 🚢 Deployment
 
-La forma más sencilla de desplegar esta aplicación es utilizando la [plataforma Vercel](https://vercel.com/new), de los creadores de Next.js.
+The easiest way to deploy this application is using the [Vercel platform](https://vercel.com/new), from the creators of Next.js.
 
-[![Desplegar con Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Ftu_usuario%2Ftu_repositorio)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fyour_user%2Fyour_repository)
 
-No olvides configurar las variables de entorno en tu proyecto de Vercel antes de desplegar.
+Don't forget to set up the environment variables in your Vercel project before deploying.
 
-## 🤝 Contribuciones
+## 🤝 Contributions
 
-Las contribuciones son bienvenidas. Si tienes alguna idea o encuentras un error, por favor abre un *issue* o envía un *pull request*.
+Contributions are welcome. If you have an idea or find a bug, please open an *issue* or submit a *pull request*.
