@@ -20,8 +20,11 @@ export async function POST(req: NextRequest) {
 		);
 		// Find the user in the database
 		const user = await User.findOne({ meta_user_id: metaUserId });
+		if (!user) {
+			throw new Error("User not found");
+		}
 		let recentQuotes: string[] = [];
-		if (user) {
+		{
 			// Find the last 30 quotes from the user
 			const quotes = await Quote.find({ user: user._id })
 				.sort({ createdAt: -1 })

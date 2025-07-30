@@ -16,10 +16,7 @@ export async function POST(request: Request) {
 	const { code } = await request.json();
 
 	if (!code) {
-		return NextResponse.json({
-			error: "We couldn't retrieve the authentication code",
-			status: 400,
-		});
+		return NextResponse.json({ error: "We couldn't retrieve the authentication code" }, { status: 400 });
 	}
 
 	try {
@@ -27,7 +24,12 @@ export async function POST(request: Request) {
 		const shortLiveToken = await getShortLivedToken(code);
 
 		// Get the long-lived token using the short-lived token.
-		const longLivedToken = await getLongLivedToken(shortLiveToken.access_token);
+		let longLivedToken;
+		try {
+			longLivedToken = await getLongLivedToken(shortLiveToken.access_token);
+		} catch (error) {
+			return NextResponse.json({ error: "There was an error logging in to Threads" }, { status: 500 });
+		}
 
 		let token;
 
@@ -76,10 +78,7 @@ export async function POST(request: Request) {
 				);
 			}
 		} catch (error) {
-			return NextResponse.json({
-				error: "There was an error logging in to Threads",
-				status: 500,
-			});
+			return NextResponse.json({ error: "There was an error logging in to Threads" }, { status: 500 });
 		}
 
 		const response = NextResponse.json({
@@ -109,9 +108,6 @@ export async function POST(request: Request) {
 
 		return response;
 	} catch (error) {
-		return NextResponse.json({
-			error: "We couldn't retrieve the token",
-			status: 400,
-		});
+		return NextResponse.json({ error: "We couldn't retrieve the token" }, { status: 400 });
 	}
 }

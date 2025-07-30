@@ -4,7 +4,7 @@ interface LoaderProps {
 
 const Loader: React.FC<LoaderProps> = () => {
     return (
-        <div className="flex justify-center items-center h-screen">
+        <div className="flex justify-center items-center h-screen" data-testid="loader">
             <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className="animate-spin">
                 <rect x="16" y="8" width="32" height="8" rx="4" fill="#3B82F6" />
                 <rect x="16" y="48" width="32" height="8" rx="4" fill="#3B82F6" />

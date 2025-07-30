@@ -3,12 +3,19 @@
  */
 module.exports = {
 	preset: "ts-jest",
-	testEnvironment: "node",
-	testMatch: ["**/app/lib/threads-api/threads-posts/*.test.ts"],
-	moduleFileExtensions: ["ts", "js", "json"],
-	globals: {
-		"ts-jest": {
-			tsconfig: "tsconfig.json",
-		},
+	testEnvironment: "jest-environment-jsdom",
+	testMatch: ["**/__tests__/**/*.test.ts?(x)"],
+	moduleFileExtensions: ["ts", "tsx", "js", "json"],
+	setupFilesAfterEnv: ['@testing-library/jest-dom'],
+	moduleNameMapper: {
+		"^@/(.*)$": "<rootDir>/$1",
 	},
+	transform: {
+        '^.+\.tsx?$': [
+            'ts-jest',
+            {
+              tsconfig: 'tsconfig.json',
+            },
+        ],
+    },
 };
