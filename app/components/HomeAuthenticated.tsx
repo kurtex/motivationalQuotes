@@ -78,6 +78,11 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken }) =>
                     </div>
                 </form>
             </div>
+            <div className="w-full flex justify-end mt-4">
+                <a href="/threads/delete" className="text-sm text-gray-500 dark:text-gray-400 hover:underline">
+                    Data Deletion Instructions
+                </a>
+            </div>
         </div>
     );
 };

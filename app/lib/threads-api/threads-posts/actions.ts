@@ -83,7 +83,7 @@ export async function getThreadsCookie() {
  * Server Action for posting a thread from the client component.
  * @param formData FormData containing the thread_post
  */
-export async function postThreadAction(formData: FormData) {
+export async function postThreadAction(formData: FormData): Promise<void> {
 	const content = formData.get("thread_post") as string;
 
 	try {

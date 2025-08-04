@@ -180,15 +180,16 @@ export async function saveUniqueGeminiQuote(
 	let lastError = null;
 
 	// Base prompt with clear instructions
-	const basePrompt = `Generate a short, original motivational quote in Spanish. Return only the quote itself.`
+	const basePrompt = `Generate a short, original motivational quote in Spanish. Return only the quote itself.`;
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		let currentPrompt = basePrompt;
 
 		// Securely add quotes to avoid, clearly separating them from the main instruction
 		if (quotesToAvoid.length > 0) {
-			currentPrompt += `\n\nDo NOT generate any of the following quotes or anything similar:\n` +
-			quotesToAvoid.map(q => `- "${q}"`).join('\n');
+			currentPrompt +=
+				`\n\nDo NOT generate any of the following quotes or anything similar:\n` +
+				quotesToAvoid.map((q) => `- "${q}"`).join("\n");
 		}
 
 		const text = await geminiTextClient.generateContent(currentPrompt);
@@ -218,4 +219,63 @@ export async function saveUniqueGeminiQuote(
 			lastError?.message || lastError
 		}`
 	);
+}
+
+/**
+ * Deletes a user and all their associated data from the database.
+ * This includes their quotes and API tokens.
+ *
+ * @param metaUserId The user's unique ID from Meta.
+ * @returns An object indicating the success status and the number of deleted documents.
+ * @throws An error if the user cannot be found or if any of the deletion steps fail.
+ */
+export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
+	success: boolean;
+	deletedQuotes: number;
+	deletedTokens: number;
+	deletedUsers: number;
+}> {
+	await connectToDB();
+
+	// 1. Find the user by their Meta user ID
+	const user = await User.findOne({ meta_user_id: metaUserId });
+
+	if (!user) {
+		// If the user is not found, there is no data to delete.
+		// This is not an error, as the goal is to have no data for this user.
+		console.log(
+			`Data Deletion: User with meta_user_id ${metaUserId} not found. No data to delete.`
+		);
+		return {
+			success: true,
+			deletedQuotes: 0,
+			deletedTokens: 0,
+			deletedUsers: 0,
+		};
+	}
+
+	const userId = user._id;
+
+	// 2. Delete all quotes associated with the user
+	const quoteDeletionResult = await Quote.deleteMany({ user: userId });
+
+	// 3. Delete all tokens associated with the user
+	const tokenDeletionResult = await Token.deleteMany({ user_id: metaUserId });
+
+	// 4. Delete the user document itself
+	const userDeletionResult = await User.deleteOne({ _id: userId });
+
+	console.log(
+		`Data Deletion: Successfully deleted data for user ${metaUserId}.`
+	);
+	console.log(`- Deleted ${quoteDeletionResult.deletedCount} quotes.`);
+	console.log(`- Deleted ${tokenDeletionResult.deletedCount} tokens.`);
+	console.log(`- Deleted ${userDeletionResult.deletedCount} users.`);
+
+	return {
+		success: true,
+		deletedQuotes: quoteDeletionResult.deletedCount || 0,
+		deletedTokens: tokenDeletionResult.deletedCount || 0,
+		deletedUsers: userDeletionResult.deletedCount || 0,
+	};
 }

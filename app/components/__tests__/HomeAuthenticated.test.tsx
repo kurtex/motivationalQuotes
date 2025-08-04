@@ -29,10 +29,11 @@ describe('HomeAuthenticated', () => {
         (postThreadAction as jest.Mock).mockClear();
     });
 
-    it('should show loader while fetching username', () => {
+    it('should show loader and not the main content while fetching username', () => {
         (getThreadsUsername as jest.Mock).mockReturnValue(new Promise(() => { })); // Never resolves
         render(<HomeAuthenticated accessToken={mockAccessToken} />);
         expect(screen.getByTestId('loader')).toBeInTheDocument();
+        expect(screen.queryByText(/Hello/)).not.toBeInTheDocument();
     });
 
     it('should display username on successful fetch', async () => {
