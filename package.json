@@ -31,7 +31,6 @@
 		"@types/node-cron": "^3.0.11",
 		"@types/react": "^19",
 		"@types/react-dom": "^19",
-		"babel-jest": "^29.7.0",
 		"eslint": "^9",
 		"eslint-config-next": "15.2.1",
 		"eslint-config-prettier": "^10.1.1",

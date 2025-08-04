@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 			);
 		}
 
-		const appSecret = process.env.NEXT_PUBLIC_CLIENT_SECRET;
+		const appSecret = process.env.CLIENT_SECRET;
 		if (!appSecret) {
 			return NextResponse.json(
 				{ error: "Internal server configuration error." },

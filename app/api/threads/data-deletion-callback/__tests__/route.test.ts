@@ -29,16 +29,16 @@ describe("POST /api/meta/data-deletion-callback", () => {
 	let originalAppSecret: string | undefined;
 
 	beforeAll(() => {
-		originalAppSecret = process.env.NEXT_PUBLIC_CLIENT_SECRET;
+		originalAppSecret = process.env.CLIENT_SECRET;
 	});
 
 	afterAll(() => {
-		process.env.NEXT_PUBLIC_CLIENT_SECRET = originalAppSecret;
+		process.env.CLIENT_SECRET = originalAppSecret;
 	});
 
 	beforeEach(() => {
 		jest.clearAllMocks();
-		process.env.NEXT_PUBLIC_CLIENT_SECRET = "test-secret";
+		process.env.CLIENT_SECRET = "test-secret";
 	});
 
 	it("should handle a valid data deletion request successfully", async () => {
@@ -83,8 +83,8 @@ describe("POST /api/meta/data-deletion-callback", () => {
 		expect(body.error).toBe("Missing signed_request");
 	});
 
-	it("should return 500 if NEXT_PUBLIC_CLIENT_SECRET is not set", async () => {
-		delete process.env.NEXT_PUBLIC_CLIENT_SECRET;
+	it("should return 500 if CLIENT_SECRET is not set", async () => {
+		delete process.env.CLIENT_SECRET;
 
 		const formData = new FormData();
 		formData.append("signed_request", "any_request");

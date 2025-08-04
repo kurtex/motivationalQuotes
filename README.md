@@ -1,6 +1,6 @@
 # Motivational Quote Generator
 
-[![Workflow Status](https://github.com/your_user/your_repository/actions/workflows/refresh_tokens.yml/badge.svg)](https://github.com/your_user/your_repository/actions/workflows/refresh_tokens.yml)
+[![Continuous Integration](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml/badge.svg)](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml)
 
 A modern web application built with Next.js that generates unique motivational quotes in Spanish using the Google Gemini API. It includes user authentication through the Threads API and an automated system for token management.
 
@@ -10,6 +10,7 @@ A modern web application built with Next.js that generates unique motivational q
 - **Social Authentication:** Secure integration with the Threads API for user registration and login.
 - **Persistent Database:** Stores users and generated quotes in MongoDB.
 - **Automated Token Management:** A robust system that automatically refreshes Threads API tokens to keep user sessions active.
+- **Data Deletion:** Implements the required Meta endpoint for users to request deletion of their data.
 - **Easy Deployment:** Optimized for easy deployment on platforms like Vercel.
 
 ## 🛠️ Tech Stack
@@ -32,14 +33,14 @@ Follow these steps to set up and run the project in your local environment.
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 18 or higher)
+- [Node.js](https://nodejs.org/) (version 20 or higher)
 - [pnpm](https://pnpm.io/) (recommended), npm, or yarn
-- A [MongoDB](https://www.mongodb.com/try/download/community) instance (local or cloud)
+- A [MongoDB](https://www.mongodb.com/) instance (local or cloud)
 
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your_user/your_repository.git
+git clone https://github.com/jjvillarreal/motivational-quotes.git
 cd motivational-quotes
 ```
 
@@ -62,6 +63,19 @@ MONGO_URI="mongodb://localhost:27017/database_name"
 
 # Secret to protect the cron job endpoint
 CRON_SECRET="A_STRONG_AND_RANDOM_SECRET"
+
+# Threads API Credentials
+NEXT_PUBLIC_CLIENT_ID="YOUR_THREADS_CLIENT_ID"
+CLIENT_SECRET="YOUR_THREADS_CLIENT_SECRET"
+
+# The base URL of your application
+NEXT_PUBLIC_BASE_URL="http://localhost:3000"
+
+# A random string to use for the OAuth state
+NEXT_PUBLIC_API_STATE="A_RANDOM_STRING"
+
+# The email address for support requests
+NEXT_PUBLIC_SUPPORT_EMAIL="YOUR_SUPPORT_EMAIL"
 ```
 
 ### 4. Run the Application
@@ -71,6 +85,12 @@ pnpm dev
 ```
 
 The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### 5. Run Tests
+
+```bash
+pnpm test
+```
 
 ---
 
@@ -95,7 +115,7 @@ For the GitHub Action to work correctly in your repository, you must configure t
 
 The easiest way to deploy this application is using the [Vercel platform](https://vercel.com/new), from the creators of Next.js.
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fyour_user%2Fyour_repository)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjjvillarreal%2Fmotivational-quotes)
 
 Don't forget to set up the environment variables in your Vercel project before deploying.
 

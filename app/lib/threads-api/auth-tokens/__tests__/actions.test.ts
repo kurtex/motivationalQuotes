@@ -21,7 +21,7 @@ describe('Token Actions', () => {
             ...originalEnv,
             NEXT_PUBLIC_BASE_URL: 'http://localhost:3000',
             NEXT_PUBLIC_CLIENT_ID: 'mock-client-id',
-            NEXT_PUBLIC_CLIENT_SECRET: 'mock-client-secret',
+            CLIENT_SECRET: 'mock-client-secret',
         };
     });
 
