@@ -23,7 +23,7 @@ export const getShortLivedToken = async (
 			{
 				params: {
 					client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-					client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
+					client_secret: process.env.CLIENT_SECRET!,
 					code: code,
 					grant_type: "authorization_code",
 					redirect_uri: redirectURI,
@@ -53,7 +53,7 @@ export const getLongLivedToken = async (
 			EThreadsAuthEndpoints.LONG_LIVED_TOKEN,
 			{
 				params: {
-					client_secret: process.env.NEXT_PUBLIC_CLIENT_SECRET!,
+					client_secret: process.env.CLIENT_SECRET!,
 					grant_type: "th_exchange_token",
 					access_token: shortLivedToken,
 				},
