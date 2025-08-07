@@ -2,92 +2,118 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import HomeAuthenticated from '../HomeAuthenticated';
 import { getThreadsUsername } from '../../lib/threads-api/user-data/actions';
-import { postThreadAction } from '../../lib/threads-api/threads-posts/actions';
-
-// Mock child component
-jest.mock('../GeminiQuoteGenerator', () => {
-    return jest.fn(({ onQuoteGenerated }) => (
-        <button onClick={() => onQuoteGenerated('mock quote from child')}>
-            Generate Motivational Quote
-        </button>
-    ));
-});
+import { getActivePrompt } from '../../lib/database/actions';
 
 // Mock actions
-jest.mock('../../lib/threads-api/user-data/actions', () => ({
-    getThreadsUsername: jest.fn(),
-}));
-jest.mock('../../lib/threads-api/threads-posts/actions', () => ({
-    postThreadAction: jest.fn(),
-}));
+jest.mock('../../lib/threads-api/user-data/actions');
+jest.mock('../../lib/database/actions');
+
+// Mock the global fetch function
+global.fetch = jest.fn();
+
+const mockFetch = fetch as jest.Mock;
+const mockGetThreadsUsername = getThreadsUsername as jest.Mock;
+const mockGetActivePrompt = getActivePrompt as jest.Mock;
 
 describe('HomeAuthenticated', () => {
     const mockAccessToken = 'mock-access-token';
 
     beforeEach(() => {
-        (getThreadsUsername as jest.Mock).mockClear();
-        (postThreadAction as jest.Mock).mockClear();
+        mockGetThreadsUsername.mockClear();
+        mockGetActivePrompt.mockClear();
+        mockFetch.mockClear();
+        // Mock console.error to avoid polluting the test output
+        jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
-    it('should show loader and not the main content while fetching username', () => {
-        (getThreadsUsername as jest.Mock).mockReturnValue(new Promise(() => { })); // Never resolves
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-        expect(screen.getByTestId('loader')).toBeInTheDocument();
-        expect(screen.queryByText(/Hello/)).not.toBeInTheDocument();
+    afterEach(() => {
+        (console.error as jest.Mock).mockRestore();
     });
 
-    it('should display username on successful fetch', async () => {
-        const mockUsername = 'testuser';
-        (getThreadsUsername as jest.Mock).mockResolvedValue(mockUsername);
+    it('should display the active prompt on load', async () => {
+        mockGetThreadsUsername.mockResolvedValue('testuser');
+        mockGetActivePrompt.mockResolvedValue('My active prompt');
+
         render(<HomeAuthenticated accessToken={mockAccessToken} />);
+
+        // Wait for loader to disappear and content to be present
         await waitFor(() => {
-            expect(screen.getByText(`Hello ${mockUsername}!`)).toBeInTheDocument();
+            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        });
+        expect(screen.getByText('My active prompt')).toBeInTheDocument();
+    });
+
+    it('should save a new prompt and update the UI', async () => {
+        mockGetThreadsUsername.mockResolvedValue('testuser');
+        mockGetActivePrompt.mockResolvedValue(null); // No initial active prompt
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve({ promptText: 'New saved prompt' }),
+        });
+
+        render(<HomeAuthenticated accessToken={mockAccessToken} />);
+
+        await waitFor(() => {
+            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        });
+
+        const textarea = screen.getByPlaceholderText('Enter your new prompt here...');
+        fireEvent.change(textarea, { target: { value: 'New saved prompt' } });
+
+        const saveButton = screen.getByRole('button', { name: /Save and Set as Active Prompt/i });
+        fireEvent.click(saveButton);
+
+        await waitFor(() => {
+            // Check for the success message and icon
+            expect(screen.getByText('Prompt saved successfully!')).toBeInTheDocument();
+            expect(screen.getByText('✅')).toBeInTheDocument();
+            // Check that the active prompt has been updated in the UI
+            expect(screen.getByText('New saved prompt')).toBeInTheDocument();
         });
     });
 
-    it('should handle username fetch error', async () => {
-        (getThreadsUsername as jest.Mock).mockRejectedValue(new Error('Fetch error'));
+    it('should show a warning for duplicate prompts', async () => {
+        mockGetThreadsUsername.mockResolvedValue('testuser');
+        mockGetActivePrompt.mockResolvedValue('Duplicate prompt');
+
         render(<HomeAuthenticated accessToken={mockAccessToken} />);
+
         await waitFor(() => {
-            expect(screen.getByText('Hello !')).toBeInTheDocument();
+            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        });
+
+        const textarea = screen.getByPlaceholderText('Enter your new prompt here...');
+        fireEvent.change(textarea, { target: { value: 'Duplicate prompt' } });
+
+        const saveButton = screen.getByRole('button', { name: /Save and Set as Active Prompt/i });
+        fireEvent.click(saveButton);
+
+        await waitFor(() => {
+            expect(screen.getByText('This prompt is already set as active.')).toBeInTheDocument();
+            expect(screen.getByText('❌')).toBeInTheDocument();
         });
     });
 
-    it('should update textarea when a quote is generated', async () => {
-        (getThreadsUsername as jest.Mock).mockResolvedValue('testuser');
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-
-        await waitFor(() => expect(screen.queryByTestId('loader')).not.toBeInTheDocument());
-
-        const generateButton = screen.getByRole('button', { name: /Generate Motivational Quote/i });
-        fireEvent.click(generateButton);
-
-        await waitFor(() => {
-            const textarea = screen.getByPlaceholderText('What are you thinking?') as HTMLTextAreaElement;
-            expect(textarea.value).toBe('mock quote from child');
-        });
-    });
-
-    it('should call postThreadAction on form submission and clear textarea', async () => {
-        (getThreadsUsername as jest.Mock).mockResolvedValue('testuser');
-        (postThreadAction as jest.Mock).mockResolvedValue(null);
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-
-        await waitFor(() => expect(screen.queryByTestId('loader')).not.toBeInTheDocument());
-
-        const textarea = screen.getByPlaceholderText('What are you thinking?') as HTMLTextAreaElement;
-        fireEvent.change(textarea, { target: { value: 'My new thread' } });
-        expect(textarea.value).toBe('My new thread');
-
-        const submitButton = screen.getByRole('button', { name: /Post Thread/i });
-        fireEvent.click(submitButton);
-
-        await waitFor(() => {
-            expect(postThreadAction).toHaveBeenCalled();
+    it('should generate a preview', async () => {
+        mockGetThreadsUsername.mockResolvedValue('testuser');
+        mockGetActivePrompt.mockResolvedValue('Active prompt for preview');
+        mockFetch.mockResolvedValueOnce({
+            ok: true,
+            json: () => Promise.resolve({ quoteText: 'Generated preview text' }),
         });
 
+        render(<HomeAuthenticated accessToken={mockAccessToken} />);
+
         await waitFor(() => {
-            expect(textarea.value).toBe('');
+            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        });
+
+        const previewButton = screen.getByRole('button', { name: /Preview Gemini's Response/i });
+        fireEvent.click(previewButton);
+
+        await waitFor(() => {
+            expect(screen.getByText('Generated preview text')).toBeInTheDocument();
+            expect(screen.getByText('✅')).toBeInTheDocument();
         });
     });
 });

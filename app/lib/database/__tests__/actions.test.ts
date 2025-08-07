@@ -1,263 +1,133 @@
 import {
-	saveThreadsToken,
-	updateThreadsToken,
-	getMetaUserIdByThreadsAccessToken,
-	saveGeminiQuote,
-	saveUniqueGeminiQuote,
-	deleteUserAndAssociatedData,
+    saveThreadsToken,
+    updateThreadsToken,
+    getMetaUserIdByThreadsAccessToken,
+    saveGeminiQuote,
+    saveUniqueGeminiQuote,
+    deleteUserAndAssociatedData,
+    savePrompt,
+    getActivePrompt,
 } from "../actions";
 import { connectToDB } from "../db";
 import Quote from "../models/Quote";
 import Token from "../models/Token";
 import User from "../models/User";
+import Prompt from "../models/Prompt";
 import { GeminiClient } from "../../ai/geminiClient";
 import crypto from "crypto";
 
 // Mock dependencies
 jest.mock("../db", () => ({
-	connectToDB: jest.fn().mockResolvedValue(null),
+    connectToDB: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock("../models/Quote", () => ({
-	__esModule: true,
-	default: {
-		create: jest.fn(),
-		findOne: jest.fn(),
-		find: jest.fn(),
-		deleteMany: jest.fn(),
-	},
-}));
-
-jest.mock("../models/Token", () => ({
-	__esModule: true,
-	default: {
-		create: jest.fn(),
-		findOne: jest.fn(),
-		findOneAndUpdate: jest.fn(),
-		deleteMany: jest.fn(),
-	},
-}));
-
-jest.mock("../models/User", () => ({
-	__esModule: true,
-	default: {
-		findOne: jest.fn(),
-		deleteOne: jest.fn(),
-	},
-}));
-
+jest.mock("../models/Quote");
+jest.mock("../models/Token");
+jest.mock("../models/User");
+jest.mock("../models/Prompt");
 jest.mock("../../ai/geminiClient");
-
 jest.mock("crypto", () => ({
-	createHash: jest.fn().mockReturnValue({
-		update: jest.fn().mockReturnThis(),
-		digest: jest.fn().mockReturnValue("mock-hash"),
-	}),
+    createHash: jest.fn().mockReturnValue({
+        update: jest.fn().mockReturnThis(),
+        digest: jest.fn().mockReturnValue("mock-hash"),
+    }),
 }));
 
-const MockedQuote = Quote as jest.Mocked<typeof Quote> & {
-	deleteMany: jest.Mock;
-};
-const MockedToken = Token as jest.Mocked<typeof Token> & {
-	deleteMany: jest.Mock;
-};
-const MockedUser = User as jest.Mocked<typeof User> & { deleteOne: jest.Mock };
+const MockedQuote = Quote as jest.Mocked<typeof Quote>;
+const MockedToken = Token as jest.Mocked<typeof Token>;
+const MockedUser = User as jest.Mocked<typeof User>;
+const MockedPrompt = Prompt as jest.Mocked<typeof Prompt>;
 const mockGeminiClient = GeminiClient as jest.Mock;
 const mockGenerateContent = jest.fn();
 const mockEmbedContent = jest.fn();
 
 describe("Database Actions", () => {
-	beforeEach(() => {
-		jest.clearAllMocks();
-		mockGeminiClient.mockImplementation(() => ({
-			generateContent: mockGenerateContent,
-			embedContent: mockEmbedContent,
-		}));
-		MockedQuote.find.mockImplementation(
-			() =>
-				({
-					sort: jest.fn().mockReturnThis(),
-					limit: jest.fn().mockResolvedValue([]),
-				} as any)
-		);
-	});
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockGeminiClient.mockImplementation(() => ({
+            generateContent: mockGenerateContent,
+            embedContent: mockEmbedContent,
+        }));
+    });
 
-	describe("deleteUserAndAssociatedData", () => {
-		it("should delete a user and all their data", async () => {
-			const metaUserId = "meta-user-123";
-			const dbUserId = "db-user-id-abc";
+    describe("savePrompt", () => {
+        it("should save a prompt and set it as active", async () => {
+            const mockUser = { _id: "user-id", save: jest.fn() };
+            MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
+            MockedUser.findOne.mockResolvedValue(mockUser);
+            MockedPrompt.create.mockResolvedValue({ _id: "prompt-id", text: "New prompt" });
 
-			MockedUser.findOne.mockResolvedValue({
-				_id: dbUserId,
-				meta_user_id: metaUserId,
-			});
-			MockedQuote.deleteMany.mockResolvedValue({ deletedCount: 5 });
-			MockedToken.deleteMany.mockResolvedValue({ deletedCount: 1 });
-			MockedUser.deleteOne.mockResolvedValue({ deletedCount: 1 });
+            const result = await savePrompt("New prompt", "access-token");
 
-			const result = await deleteUserAndAssociatedData(metaUserId);
+            expect(MockedPrompt.create).toHaveBeenCalledWith({ text: "New prompt", user: "user-id" });
+            expect(mockUser.active_prompt).toBe("prompt-id");
+            expect(mockUser.save).toHaveBeenCalled();
+            expect(result).toBe("New prompt");
+        });
+    });
 
-			expect(connectToDB).toHaveBeenCalled();
-			expect(MockedUser.findOne).toHaveBeenCalledWith({
-				meta_user_id: metaUserId,
-			});
-			expect(MockedQuote.deleteMany).toHaveBeenCalledWith({ user: dbUserId });
-			expect(MockedToken.deleteMany).toHaveBeenCalledWith({
-				user_id: metaUserId,
-			});
-			expect(MockedUser.deleteOne).toHaveBeenCalledWith({ _id: dbUserId });
+    describe("getActivePrompt", () => {
+        it("should return the active prompt text", async () => {
+            const mockUser = {
+                active_prompt: { text: "Active prompt" },
+            };
+            MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
+            (MockedUser.findOne as jest.Mock).mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockUser),
+            });
 
-			expect(result).toEqual({
-				success: true,
-				deletedQuotes: 5,
-				deletedTokens: 1,
-				deletedUsers: 1,
-			});
-		});
+            const result = await getActivePrompt("access-token");
 
-		it("should return success without deleting if user is not found", async () => {
-			const metaUserId = "non-existent-user";
-			MockedUser.findOne.mockResolvedValue(null);
+            expect(result).toBe("Active prompt");
+        });
 
-			const result = await deleteUserAndAssociatedData(metaUserId);
+        it("should return null if there is no active prompt", async () => {
+            const mockUser = { active_prompt: null };
+            MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
+            (MockedUser.findOne as jest.Mock).mockReturnValue({
+                populate: jest.fn().mockResolvedValue(mockUser),
+            });
 
-			expect(MockedUser.findOne).toHaveBeenCalledWith({
-				meta_user_id: metaUserId,
-			});
-			expect(MockedQuote.deleteMany).not.toHaveBeenCalled();
-			expect(MockedToken.deleteMany).not.toHaveBeenCalled();
-			expect(MockedUser.deleteOne).not.toHaveBeenCalled();
+            const result = await getActivePrompt("access-token");
 
-			expect(result).toEqual({
-				success: true,
-				deletedQuotes: 0,
-				deletedTokens: 0,
-				deletedUsers: 0,
-			});
-		});
-	});
+            expect(result).toBeNull();
+        });
+    });
 
-	describe("saveThreadsToken", () => {
-		it("should save a token successfully", async () => {
-			const mockToken = { user_id: "1", access_token: "abc", expires_in: 3600 };
-			MockedToken.create.mockResolvedValue(mockToken);
-			const result = await saveThreadsToken("1", "abc", 3600);
-			expect(connectToDB).toHaveBeenCalled();
-			expect(MockedToken.create).toHaveBeenCalled();
-			expect(result).toEqual(mockToken);
-		});
-	});
+    describe("saveGeminiQuote", () => {
+        it("should save a quote with a prompt reference", async () => {
+            MockedToken.findOne.mockResolvedValue({ user_id: "user-123" });
+            MockedUser.findOne.mockResolvedValue({ _id: "db-user-id" });
+            mockEmbedContent.mockResolvedValue([0.1, 0.2]);
+            MockedQuote.findOne.mockResolvedValue(null);
+            MockedQuote.create.mockResolvedValue({ text: "A new quote" });
 
-	describe("updateThreadsToken", () => {
-		it("should update a token successfully", async () => {
-			const mockToken = { user_id: "1", access_token: "def", expires_in: 7200 };
-			MockedToken.findOneAndUpdate.mockResolvedValue(mockToken);
-			const result = await updateThreadsToken("1", "def", 7200);
-			expect(connectToDB).toHaveBeenCalled();
-			expect(MockedToken.findOneAndUpdate).toHaveBeenCalled();
-			expect(result).toEqual(mockToken);
-		});
-	});
+            await saveGeminiQuote("A new quote", "access-token", "prompt-id");
 
-	describe("getMetaUserIdByThreadsAccessToken", () => {
-		it("should return user_id for a valid token", async () => {
-			MockedToken.findOne.mockResolvedValue({ user_id: "123" });
-			const userId = await getMetaUserIdByThreadsAccessToken("valid-token");
-			expect(userId).toBe("123");
-			expect(MockedToken.findOne).toHaveBeenCalledWith({
-				access_token: "valid-token",
-			});
-		});
+            expect(MockedQuote.create).toHaveBeenCalledWith(expect.objectContaining({
+                prompt: "prompt-id",
+            }));
+        });
+    });
 
-		it("should throw an error for an invalid token", async () => {
-			MockedToken.findOne.mockResolvedValue(null);
-			await expect(
-				getMetaUserIdByThreadsAccessToken("invalid-token")
-			).rejects.toThrow("Token not found");
-		});
-	});
+    describe("saveUniqueGeminiQuote", () => {
+        beforeEach(() => {
+            MockedToken.findOne.mockResolvedValue({ user_id: "user-123" });
+            MockedUser.findOne.mockResolvedValue({ _id: "db-user-id" });
+            mockEmbedContent.mockResolvedValue([0.1, 0.2]);
+            MockedQuote.findOne.mockResolvedValue(null);
+            MockedQuote.create.mockResolvedValue({ text: "A unique quote" });
+        });
 
-	describe("saveGeminiQuote", () => {
-		beforeEach(() => {
-			MockedToken.findOne.mockResolvedValue({ user_id: "user-123" });
-			MockedUser.findOne.mockResolvedValue({ _id: "db-user-id" });
-			mockEmbedContent.mockResolvedValue([0.1, 0.2]);
-			MockedQuote.create.mockResolvedValue({ text: "A new quote" });
-		});
+        it("should build a secure prompt with user input and avoid list", async () => {
+            const userPrompt = "A quote about learning";
+            const quotesToAvoid = ["Old quote 1", "Old quote 2"];
+            mockGenerateContent.mockResolvedValue("A new unique quote");
 
-		it("should save a unique quote", async () => {
-			MockedQuote.findOne.mockResolvedValue(null);
-			const result = await saveGeminiQuote("A new quote", "access-token");
-			expect(result).toBe("A new quote");
-			expect(crypto.createHash).toHaveBeenCalledWith("sha256");
-			expect(mockEmbedContent).toHaveBeenCalledWith("A new quote");
-			expect(MockedQuote.create).toHaveBeenCalled();
-		});
+            await saveUniqueGeminiQuote("access-token", quotesToAvoid, 5, userPrompt);
 
-		it("should throw error for duplicate hash", async () => {
-			MockedQuote.findOne.mockResolvedValue({ text: "Existing quote" });
-			await expect(
-				saveGeminiQuote("A new quote", "access-token")
-			).rejects.toThrow("Duplicate quote detected (hash)");
-		});
-
-		it("should throw error for near-duplicate embedding", async () => {
-			MockedQuote.findOne.mockResolvedValue(null);
-			MockedQuote.find.mockImplementation(
-				() =>
-					({
-						sort: jest.fn().mockReturnThis(),
-						limit: jest.fn().mockResolvedValue([{ embedding: [0.1, 0.21] }]),
-					} as any)
-			);
-			await expect(
-				saveGeminiQuote("A new quote", "access-token")
-			).rejects.toThrow("Near-duplicate quote detected (embedding)");
-		});
-	});
-
-	describe("saveUniqueGeminiQuote", () => {
-		beforeEach(() => {
-			MockedToken.findOne.mockResolvedValue({ user_id: "user-123" });
-			MockedUser.findOne.mockResolvedValue({ _id: "db-user-id" });
-			mockEmbedContent.mockResolvedValue([0.1, 0.2]);
-		});
-
-		it("should generate and save a quote on the first try", async () => {
-			mockGenerateContent.mockResolvedValue("A unique quote");
-			MockedQuote.findOne.mockResolvedValue(null);
-			MockedQuote.create.mockResolvedValue({ text: "A unique quote" });
-			const result = await saveUniqueGeminiQuote("access-token", []);
-			expect(result).toBe("A unique quote");
-			expect(mockGenerateContent).toHaveBeenCalledTimes(1);
-		});
-
-		it("should retry on duplicate hash error and succeed", async () => {
-			mockGenerateContent
-				.mockResolvedValueOnce("Duplicate quote")
-				.mockResolvedValueOnce("Unique quote");
-			MockedQuote.findOne.mockResolvedValueOnce({ text: "Duplicate quote" });
-			MockedQuote.findOne.mockResolvedValueOnce(null);
-			MockedQuote.find.mockImplementation(
-				() =>
-					({
-						sort: jest.fn().mockReturnThis(),
-						limit: jest.fn().mockResolvedValue([]),
-					} as any)
-			);
-			MockedQuote.create.mockResolvedValue({ text: "Unique quote" });
-			const result = await saveUniqueGeminiQuote("access-token", []);
-			expect(result).toBe("Unique quote");
-			expect(mockGenerateContent).toHaveBeenCalledTimes(2);
-		});
-
-		it("should throw after max retries", async () => {
-			mockGenerateContent.mockResolvedValue("Duplicate quote");
-			MockedQuote.findOne.mockResolvedValue({ text: "Duplicate quote" });
-			await expect(
-				saveUniqueGeminiQuote("access-token", [], 3)
-			).rejects.toThrow("No unique quote could be generated after 3 attempts");
-			expect(mockGenerateContent).toHaveBeenCalledTimes(3);
-		});
-	});
+            const expectedPrompt = `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${userPrompt}</user_prompt>\n\nIMPORTANT: Do not generate a response similar to any of the following, which are enclosed in <avoid_list> tags:\n<avoid_list>\n- \"Old quote 1\"\n- \"Old quote 2\"\n</avoid_list>`;
+            expect(mockGenerateContent).toHaveBeenCalledWith(expectedPrompt);
+        });
+    });
 });

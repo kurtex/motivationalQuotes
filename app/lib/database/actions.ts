@@ -5,6 +5,7 @@ import Quote, { IQuote } from "./models/Quote";
 import Token, { IToken } from "./models/Token";
 import User from "./models/User";
 import crypto from "crypto";
+import Prompt from "./models/Prompt";
 import { GeminiClient } from "../ai/geminiClient";
 import { GeminiModel } from "../ai/geminiModels";
 
@@ -90,7 +91,8 @@ async function saveToken(
  */
 export async function saveGeminiQuote(
 	text: string,
-	threadsAccessToken: string
+	threadsAccessToken: string,
+	promptId?: string
 ): Promise<string> {
 	// Find user by access token
 	const metaUserId = await getMetaUserIdByThreadsAccessToken(
@@ -127,6 +129,7 @@ export async function saveGeminiQuote(
 		hash,
 		embedding,
 		user: user._id,
+		prompt: promptId,
 	});
 
 	return quote.text;
@@ -169,33 +172,38 @@ export async function getMetaUserIdByThreadsAccessToken(
  * @param threadsAccessToken The user's Threads access token
  * @param quotesToAvoid A list of quotes to avoid generating duplicates of.
  * @param maxRetries Maximum number of attempts to get a unique quote
+ * @param prompt An optional prompt to guide quote generation.
  * @returns The saved quote document
  */
 export async function saveUniqueGeminiQuote(
 	threadsAccessToken: string,
 	quotesToAvoid: string[],
-	maxRetries = 5
+	maxRetries = 5,
+	prompt?: string,
+	promptId?: string
 ): Promise<string> {
 	const geminiTextClient = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
 	let lastError = null;
 
 	// Base prompt with clear instructions
-	const basePrompt = `Generate a short, original motivational quote in Spanish. Return only the quote itself.`;
+	const basePrompt =
+		prompt
+			? `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${prompt}</user_prompt>`
+			: `Generate a short, original motivational quote in Spanish. Return only the quote itself.`
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		let currentPrompt = basePrompt;
 
-		// Securely add quotes to avoid, clearly separating them from the main instruction
+		// Always add the list of quotes to avoid, if any exist, wrapped in delimiters.
 		if (quotesToAvoid.length > 0) {
-			currentPrompt +=
-				`\n\nDo NOT generate any of the following quotes or anything similar:\n` +
-				quotesToAvoid.map((q) => `- "${q}"`).join("\n");
+			const avoidList = quotesToAvoid.map((q) => `- "${q}"`).join("\n");
+			currentPrompt += `\n\nIMPORTANT: Do not generate a response similar to any of the following, which are enclosed in <avoid_list> tags:\n<avoid_list>\n${avoidList}\n</avoid_list>`;
 		}
 
 		const text = await geminiTextClient.generateContent(currentPrompt);
 		try {
 			// Reuse the deduplication and save logic
-			return await saveGeminiQuote(text, threadsAccessToken);
+			return await saveGeminiQuote(text, threadsAccessToken, promptId);
 		} catch (err: any) {
 			lastError = err;
 			// Only retry on deduplication errors
@@ -278,4 +286,25 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 		deletedTokens: tokenDeletionResult.deletedCount || 0,
 		deletedUsers: userDeletionResult.deletedCount || 0,
 	};
+}
+
+export async function savePrompt(text: string, threadsAccessToken: string): Promise<string> {
+    const metaUserId = await getMetaUserIdByThreadsAccessToken(threadsAccessToken);
+    const user = await User.findOne({ meta_user_id: metaUserId });
+    if (!user) throw new Error("User not found");
+
+    const prompt = await Prompt.create({ text, user: user._id });
+
+    user.active_prompt = prompt._id;
+    await user.save();
+
+    return prompt.text;
+}
+
+export async function getActivePrompt(threadsAccessToken: string): Promise<string | null> {
+    const metaUserId = await getMetaUserIdByThreadsAccessToken(threadsAccessToken);
+    const user = await User.findOne({ meta_user_id: metaUserId }).populate('active_prompt');
+    if (!user || !user.active_prompt) return null;
+
+    return (user.active_prompt as any).text;
 }
