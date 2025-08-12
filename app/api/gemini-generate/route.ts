@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { savePrompt } from "@/app/lib/database/actions";
 import { getThreadsCookie } from "@/app/lib/threads-api/threads-posts/actions";
+import { connectToDB } from "@/app/lib/database/db";
 
 export async function POST(req: NextRequest) {
+	await connectToDB();
 	const { prompt } = await req.json();
 	const accessTokenCookie = await getThreadsCookie();
 

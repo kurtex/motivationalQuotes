@@ -308,3 +308,10 @@ export async function getActivePrompt(threadsAccessToken: string): Promise<strin
 
     return (user.active_prompt as any).text;
 }
+
+export async function getTokenExpiration(threadsAccessToken: string): Promise<number | null> {
+    const token = await Token.findOne({ access_token: threadsAccessToken });
+    if (!token) return null;
+
+    return token.last_updated + token.expires_in;
+}

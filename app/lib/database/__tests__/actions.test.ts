@@ -7,6 +7,7 @@ import {
     deleteUserAndAssociatedData,
     savePrompt,
     getActivePrompt,
+    getTokenExpiration,
 } from "../actions";
 import { connectToDB } from "../db";
 import Quote from "../models/Quote";
@@ -128,6 +129,21 @@ describe("Database Actions", () => {
 
             const expectedPrompt = `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${userPrompt}</user_prompt>\n\nIMPORTANT: Do not generate a response similar to any of the following, which are enclosed in <avoid_list> tags:\n<avoid_list>\n- \"Old quote 1\"\n- \"Old quote 2\"\n</avoid_list>`;
             expect(mockGenerateContent).toHaveBeenCalledWith(expectedPrompt);
+        });
+    });
+
+    describe("getTokenExpiration", () => {
+        it("should return the token's expiration time when found", async () => {
+            const mockNow = Math.floor(Date.now() / 1000);
+            MockedToken.findOne.mockResolvedValue({ last_updated: mockNow, expires_in: 3600 });
+            const result = await getTokenExpiration("test-access-token");
+            expect(result).toBe(mockNow + 3600);
+        });
+
+        it("should return null if the token is not found", async () => {
+            MockedToken.findOne.mockResolvedValue(null);
+            const result = await getTokenExpiration("non-existent-token");
+            expect(result).toBeNull();
         });
     });
 });

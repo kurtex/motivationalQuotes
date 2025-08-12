@@ -14,9 +14,7 @@ const MockSchema = class Schema {
 const mockMongoose = {
     connect: jest.fn().mockImplementation(async () => {
         mockConnection.readyState = 1; // Simulate successful connection
-        // Manually set isConnected in the db module
-        const dbModule = jest.requireActual('../db');
-        dbModule.isConnected = true;
+        
     }),
     connection: mockConnection, // Use the same connection object
     Schema: MockSchema,

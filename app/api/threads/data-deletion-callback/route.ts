@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateSignedRequest } from "@/app/lib/meta/security";
 import { deleteUserAndAssociatedData } from "@/app/lib/database/actions";
+import { connectToDB } from "@/app/lib/database/db";
 
 /**
  * Handles the Data Deletion Callback from Meta.
@@ -9,6 +10,7 @@ import { deleteUserAndAssociatedData } from "@/app/lib/database/actions";
  * @see https://developers.facebook.com/docs/development/create-an-app/app-dashboard/data-deletion-callback
  */
 export async function POST(request: NextRequest) {
+	await connectToDB();
 	try {
 		const formData = await request.formData();
 		const signedRequest = formData.get("signed_request") as string;
