@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { getActivePrompt } from "../lib/database/actions";
 import { getThreadsUsername } from "../lib/threads-api/user-data/actions";
+import TokenExpirationTimer from "./TokenExpirationTimer";
 import Loader from "./Loader";
 
 /**
@@ -10,6 +11,7 @@ import Loader from "./Loader";
  */
 interface HomeAuthenticatedProps {
     accessToken: string; // The access token for the authenticated user
+    tokenExpiration: number; // The expiration time of the token in seconds
 }
 
 async function fetchThreadsUsername (accessToken: string): Promise<string> {
@@ -35,7 +37,7 @@ async function fetchActivePrompt (accessToken: string): Promise<string | null> {
     return getActivePrompt(accessToken);
 }
 
-const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken }) => {
+const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, tokenExpiration }) => {
     const [username, setUsername] = useState<string>("");
     const [loading, setLoading] = useState(true);
     const [responseText, setResponseText] = useState("");
@@ -142,7 +144,7 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken }) =>
                     </div>
                 )}
                 {responseStatus !== 'idle' && (
-                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl p-4 mt-4">
+                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl p-4 mt-4 flex items-start">
                         <h4 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-1">Response:</h4>
                         <div className="flex items-center">
                             {responseStatus === 'success' && <span className="text-2xl mr-2">✅</span>}
@@ -157,6 +159,7 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken }) =>
                     Data Deletion Instructions
                 </a>
             </div>
+            <TokenExpirationTimer expiresAt={tokenExpiration} />
         </div>
     );
 };

@@ -22,7 +22,7 @@ export interface IToken extends Document {
  */
 const TokenSchema: Schema = new Schema({
 	user_id: { type: String, required: true, unique: true },
-	access_token: { type: String, required: true },
+	access_token: { type: String, required: true, index: true }, // Add index to access_token
 	last_updated: { type: Number, required: true },
 	expires_in: { type: Number, required: true },
 });
