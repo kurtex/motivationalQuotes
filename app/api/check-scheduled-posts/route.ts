@@ -68,8 +68,10 @@ export async function POST(req: NextRequest) {
 			nextScheduledAt: { $lte: now },
 			status: "active",
 		})
-			.populate("userId")
-			.populate("userId.active_prompt"); // Populate user and active_prompt
+			.populate("userId", "_id active_prompt")
+			.select("_id userId nextScheduledAt status")
+			.limit(100) // Limit the number of posts processed in one batch
+			.exec();
 
 		for (const post of duePosts) {
 			try {
@@ -94,7 +96,10 @@ export async function POST(req: NextRequest) {
 				}
 
 				// 1. Generate quote from active prompt
-				const recentQuotes = await Quote.find({ user: user._id, prompt: user.active_prompt })
+				const recentQuotes = await Quote.find({
+					user: user._id,
+					prompt: user.active_prompt,
+				})
 					.sort({ createdAt: -1 })
 					.limit(30)
 					.select("text");
@@ -138,6 +143,8 @@ export async function POST(req: NextRequest) {
 				console.error(`Failed to process scheduled post ${post._id}:`, err);
 			}
 		}
+
+		console.log(`Processed ${processedCount} posts successfully.`);
 
 		return NextResponse.json({ processedCount, errors }, { status: 200 });
 	} catch (error: any) {
