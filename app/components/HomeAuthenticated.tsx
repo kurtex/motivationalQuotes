@@ -50,7 +50,8 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
             setUsername(username);
             setActivePrompt(prompt);
             setScheduledPost(schedule);
-        }).catch((err) => {
+            console.log("Fetched data successfully:", { username, prompt, schedule });
+        }).catch(err => {
             console.error("Error fetching initial data:", err);
             setUsername("");
             setActivePrompt(null);

@@ -48,6 +48,8 @@ export async function POST(request: NextRequest) {
 			{ status: 200 }
 		);
 	} catch (error) {
+		console.error(error);
+
 		const isValidationError =
 			error instanceof Error &&
 			(error.message.includes("Invalid") ||
