@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getThreadsCookie } from "@/app/lib/threads-api/threads-posts/actions";
-import { getMetaUserIdByThreadsAccessToken } from "@/app/lib/database/actions";
-import User from "@/app/lib/database/models/User";
-import Quote from "@/app/lib/database/models/Quote";
-import { GeminiClient } from "@/app/lib/ai/geminiClient";
-import { GeminiModel } from "@/app/lib/ai/geminiModels";
+import { getThreadsCookie } from "../../../lib/threads-api/threads-posts/actions";
+import { getMetaUserIdByThreadsAccessToken } from "../../../lib/database/actions";
+import User from "../../../lib/database/models/User";
+import Quote from "../../../lib/database/models/Quote";
+import { GeminiClient } from "../../../lib/ai/geminiClient";
+import { GeminiModel } from "../../../lib/ai/geminiModels";
 
 export async function POST(req: NextRequest) {
     const { prompt } = await req.json();

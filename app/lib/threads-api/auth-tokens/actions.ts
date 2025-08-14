@@ -4,7 +4,7 @@ import apiClient from "../apiClient";
 import { EThreadsAuthEndpoints } from "../EThreadsEndpoints";
 
 // Authorization endpoints
-export const redirectURI = `${process.env.NEXT_PUBLIC_BASE_URL!}/redirect`;
+export const redirectURI = `${process.env.NEXT_PUBLIC_BASE_URL!}/redirect`; // Moved inside function
 
 /**
  * Exhanges the code for a Short-Lived Token from Threads to use for further authentication.
@@ -17,16 +17,21 @@ export const getShortLivedToken = async (
 	code: string
 ): Promise<ShortLivedTokenResponse> => {
 	try {
+		const redirectURI = `${process.env.NEXT_PUBLIC_BASE_URL!}/redirect`; // Define here
+
 		const response = await apiClient.post(
 			EThreadsAuthEndpoints.SHORT_LIVED_TOKEN,
-			null,
+			new URLSearchParams({
+				// Send as form-urlencoded data
+				client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
+				client_secret: process.env.CLIENT_SECRET!,
+				code: code,
+				grant_type: "authorization_code",
+				redirect_uri: redirectURI,
+			}),
 			{
-				params: {
-					client_id: process.env.NEXT_PUBLIC_CLIENT_ID!,
-					client_secret: process.env.CLIENT_SECRET!,
-					code: code,
-					grant_type: "authorization_code",
-					redirect_uri: redirectURI,
+				headers: {
+					"Content-Type": "application/x-www-form-urlencoded",
 				},
 			}
 		);

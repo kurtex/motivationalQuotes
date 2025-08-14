@@ -8,6 +8,7 @@ import crypto from "crypto";
 import Prompt from "./models/Prompt";
 import { GeminiClient } from "../ai/geminiClient";
 import { GeminiModel } from "../ai/geminiModels";
+import ScheduledPost, { IScheduledPost } from "./models/ScheduledPost"; // Added import
 
 /**
  * Saves a Threads token to the database.
@@ -186,10 +187,9 @@ export async function saveUniqueGeminiQuote(
 	let lastError = null;
 
 	// Base prompt with clear instructions
-	const basePrompt =
-		prompt
-			? `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${prompt}</user_prompt>`
-			: `Generate a short, original motivational quote in Spanish. Return only the quote itself.`
+	const basePrompt = prompt
+		? `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${prompt}</user_prompt>`
+		: `Generate a short, original motivational quote in Spanish. Return only the quote itself.`;
 
 	for (let attempt = 0; attempt < maxRetries; attempt++) {
 		let currentPrompt = basePrompt;
@@ -288,30 +288,103 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	};
 }
 
-export async function savePrompt(text: string, threadsAccessToken: string): Promise<string> {
-    const metaUserId = await getMetaUserIdByThreadsAccessToken(threadsAccessToken);
-    const user = await User.findOne({ meta_user_id: metaUserId });
-    if (!user) throw new Error("User not found");
+export async function savePrompt(
+	text: string,
+	threadsAccessToken: string
+): Promise<string> {
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(
+		threadsAccessToken
+	);
+	const user = await User.findOne({ meta_user_id: metaUserId });
+	if (!user) throw new Error("User not found");
 
-    const prompt = await Prompt.create({ text, user: user._id });
+	const prompt = await Prompt.create({ text, user: user._id });
 
-    user.active_prompt = prompt._id;
-    await user.save();
+	user.active_prompt = prompt._id;
+	await user.save();
 
-    return prompt.text;
+	return prompt.text;
 }
 
-export async function getActivePrompt(threadsAccessToken: string): Promise<string | null> {
-    const metaUserId = await getMetaUserIdByThreadsAccessToken(threadsAccessToken);
-    const user = await User.findOne({ meta_user_id: metaUserId }).populate('active_prompt');
-    if (!user || !user.active_prompt) return null;
+export async function getActivePrompt(
+	threadsAccessToken: string
+): Promise<string | null> {
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(
+		threadsAccessToken
+	);
+	const user = await User.findOne({ meta_user_id: metaUserId }).populate(
+		"active_prompt"
+	);
+	if (!user || !user.active_prompt) return null;
 
-    return (user.active_prompt as any).text;
+	return (user.active_prompt as any).text;
 }
 
-export async function getTokenExpiration(threadsAccessToken: string): Promise<number | null> {
-    const token = await Token.findOne({ access_token: threadsAccessToken });
-    if (!token) return null;
+export async function getTokenExpiration(
+	threadsAccessToken: string
+): Promise<number | null> {
+	const token = await Token.findOne({ access_token: threadsAccessToken });
+	if (!token) return null;
 
-    return token.last_updated + token.expires_in;
+	return token.last_updated + token.expires_in;
+}
+
+/**
+ * Retrieves the active scheduled post for a given user.
+ * @param threadsAccessToken The user's Threads access token.
+ * @returns The scheduled post document or null if not found.
+ */
+export async function getScheduledPostForUser(
+	threadsAccessToken: string
+): Promise<IScheduledPost | null> {
+	await connectToDB();
+
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(
+		threadsAccessToken
+	);
+	const user = await User.findOne({ meta_user_id: metaUserId });
+	if (!user) {
+		return null; // User not found
+	}
+
+	const scheduledPost = await ScheduledPost.findOne({ userId: user._id });
+
+	if (scheduledPost) {
+		// Manually convert _id to string and Date objects to ISO strings
+		const plainScheduledPost: IScheduledPost = {
+			...scheduledPost.toObject(),
+			_id: scheduledPost._id.toString(), // Convert ObjectId to string
+			userId: scheduledPost.userId.toString(), // Convert ObjectId to string
+			createdAt: scheduledPost.createdAt.toISOString(), // Convert Date to ISO string
+			updatedAt: scheduledPost.updatedAt.toISOString(), // Convert Date to ISO string
+			nextScheduledAt: scheduledPost.nextScheduledAt.toISOString(), // Convert Date to ISO string
+			// lastPostedAt might be null, so check before converting
+			lastPostedAt: scheduledPost.lastPostedAt
+				? scheduledPost.lastPostedAt.toISOString()
+				: undefined,
+		};
+		return plainScheduledPost;
+	}
+
+	return null;
+}
+
+/**
+ * Clears (deletes) the active scheduled post for a given user.
+ * @param threadsAccessToken The user's Threads access token.
+ * @returns True if a schedule was deleted, false otherwise.
+ */
+export async function clearScheduledPostForUser(
+	threadsAccessToken: string
+): Promise<boolean> {
+	await connectToDB();
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(
+		threadsAccessToken
+	);
+	const user = await User.findOne({ meta_user_id: metaUserId });
+	if (!user) {
+		return false; // User not found
+	}
+	const result = await ScheduledPost.deleteOne({ userId: user._id });
+	return result.deletedCount > 0;
 }
