@@ -2,7 +2,6 @@ import {
     getShortLivedToken,
     getLongLivedToken,
     refreshLongLivedToken,
-    redirectURI,
 } from '../actions';
 import apiClient from '../../apiClient';
 import { EThreadsAuthEndpoints } from '../../EThreadsEndpoints';
@@ -38,16 +37,20 @@ describe('Token Actions', () => {
             const result = await getShortLivedToken('auth-code');
 
             expect(result).toEqual(mockResponse.data);
+            const expectedBody = new URLSearchParams({
+                client_id: 'mock-client-id',
+                client_secret: 'mock-client-secret',
+                code: 'auth-code',
+                grant_type: 'authorization_code',
+                redirect_uri: `${process.env.NEXT_PUBLIC_BASE_URL}/redirect`,
+            });
+
             expect(mockedApiClient.post).toHaveBeenCalledWith(
                 EThreadsAuthEndpoints.SHORT_LIVED_TOKEN,
-                null,
+                expectedBody,
                 {
-                    params: {
-                        client_id: 'mock-client-id',
-                        client_secret: 'mock-client-secret',
-                        code: 'auth-code',
-                        grant_type: 'authorization_code',
-                        redirect_uri: redirectURI,
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
                     },
                 }
             );

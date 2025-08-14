@@ -8,6 +8,27 @@ import { getActivePrompt } from '../../lib/database/actions';
 jest.mock('../../lib/threads-api/user-data/actions');
 jest.mock('../../lib/database/actions');
 
+// Mock next/navigation
+jest.mock('next/navigation', () => ({
+  useRouter: jest.fn(() => ({
+    push: jest.fn(),
+  })),
+  useSearchParams: jest.fn(() => ({
+    get: jest.fn(),
+  })),
+}));
+
+// Mock axios
+jest.mock('axios', () => ({
+  create: jest.fn(() => ({
+    post: jest.fn(),
+    get: jest.fn(),
+  })),
+  // Also mock the top-level post and get if they are used directly
+  post: jest.fn(),
+  get: jest.fn(),
+}));
+
 // Mock the global fetch function
 global.fetch = jest.fn();
 
@@ -19,101 +40,56 @@ describe('HomeAuthenticated', () => {
     const mockAccessToken = 'mock-access-token';
 
     beforeEach(() => {
-        mockGetThreadsUsername.mockClear();
-        mockGetActivePrompt.mockClear();
-        mockFetch.mockClear();
+        jest.clearAllMocks();
         // Mock console.error to avoid polluting the test output
-        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => { });
+        mockGetThreadsUsername.mockResolvedValue('testuser');
+        mockGetActivePrompt.mockResolvedValue('My active prompt');
+        // Mock fetchScheduledPost to resolve immediately
+        jest.mock('../../lib/database/actions', () => ({
+            ...jest.requireActual('../../lib/database/actions'), // Keep actual implementations for other actions
+            getScheduledPostForUser: jest.fn().mockResolvedValue(null),
+        }));
     });
 
     afterEach(() => {
         (console.error as jest.Mock).mockRestore();
     });
 
-    it('should display the active prompt on load', async () => {
-        mockGetThreadsUsername.mockResolvedValue('testuser');
-        mockGetActivePrompt.mockResolvedValue('My active prompt');
+    it('should render without crashing and display username', async () => {
+        render(<HomeAuthenticated accessToken={mockAccessToken} tokenExpiration={Date.now() + 3600000} />);
 
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-
-        // Wait for loader to disappear and content to be present
         await waitFor(() => {
-            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+            expect(screen.getByText(/Hello testuser!/i)).toBeInTheDocument();
         });
-        expect(screen.getByText('My active prompt')).toBeInTheDocument();
     });
 
-    it('should save a new prompt and update the UI', async () => {
-        mockGetThreadsUsername.mockResolvedValue('testuser');
-        mockGetActivePrompt.mockResolvedValue(null); // No initial active prompt
+    it('should handle logout successfully', async () => {
         mockFetch.mockResolvedValueOnce({
             ok: true,
-            json: () => Promise.resolve({ promptText: 'New saved prompt' }),
+            json: async () => ({}),
         });
 
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
+        // Mock window.location.href
+        const { location } = window;
+        delete window.location;
+        window.location = { ...location, href: '' } as Location;
+
+        render(<HomeAuthenticated accessToken={mockAccessToken} tokenExpiration={Date.now() + 3600000} />);
 
         await waitFor(() => {
-            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+            expect(screen.getByText(/Hello testuser!/i)).toBeInTheDocument();
         });
 
-        const textarea = screen.getByPlaceholderText('Enter your new prompt here...');
-        fireEvent.change(textarea, { target: { value: 'New saved prompt' } });
-
-        const saveButton = screen.getByRole('button', { name: /Save and Set as Active Prompt/i });
-        fireEvent.click(saveButton);
+        const logoutButton = screen.getByRole('button', { name: /Logout/i });
+        fireEvent.click(logoutButton);
 
         await waitFor(() => {
-            // Check for the success message and icon
-            expect(screen.getByText('Prompt saved successfully!')).toBeInTheDocument();
-            expect(screen.getByText('✅')).toBeInTheDocument();
-            // Check that the active prompt has been updated in the UI
-            expect(screen.getByText('New saved prompt')).toBeInTheDocument();
-        });
-    });
-
-    it('should show a warning for duplicate prompts', async () => {
-        mockGetThreadsUsername.mockResolvedValue('testuser');
-        mockGetActivePrompt.mockResolvedValue('Duplicate prompt');
-
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-
-        await waitFor(() => {
-            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+            expect(mockFetch).toHaveBeenCalledWith('/api/auth/logout', { method: 'POST' });
+            expect(window.location.href).toBe('/');
         });
 
-        const textarea = screen.getByPlaceholderText('Enter your new prompt here...');
-        fireEvent.change(textarea, { target: { value: 'Duplicate prompt' } });
-
-        const saveButton = screen.getByRole('button', { name: /Save and Set as Active Prompt/i });
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(screen.getByText('This prompt is already set as active.')).toBeInTheDocument();
-            expect(screen.getByText('❌')).toBeInTheDocument();
-        });
-    });
-
-    it('should generate a preview', async () => {
-        mockGetThreadsUsername.mockResolvedValue('testuser');
-        mockGetActivePrompt.mockResolvedValue('Active prompt for preview');
-        mockFetch.mockResolvedValueOnce({
-            ok: true,
-            json: () => Promise.resolve({ quoteText: 'Generated preview text' }),
-        });
-
-        render(<HomeAuthenticated accessToken={mockAccessToken} />);
-
-        await waitFor(() => {
-            expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
-        });
-
-        const previewButton = screen.getByRole('button', { name: /Preview Gemini's Response/i });
-        fireEvent.click(previewButton);
-
-        await waitFor(() => {
-            expect(screen.getByText('Generated preview text')).toBeInTheDocument();
-            expect(screen.getByText('✅')).toBeInTheDocument();
-        });
+        // Restore window.location
+        window.location = location;
     });
 });

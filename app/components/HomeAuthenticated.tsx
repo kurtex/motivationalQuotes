@@ -1,40 +1,32 @@
 "use client";
+/** @jsxImportSource react */
 
 import { useState, useEffect } from "react";
-import { getActivePrompt } from "../lib/database/actions";
+import { getActivePrompt, getScheduledPostForUser, savePrompt } from "../lib/database/actions";
 import { getThreadsUsername } from "../lib/threads-api/user-data/actions";
 import TokenExpirationTimer from "./TokenExpirationTimer";
 import Loader from "./Loader";
+import GeminiQuoteGenerator from "./GeminiQuoteGenerator";
+import { IScheduledPost } from "../lib/database/models/ScheduledPost";
 
 /**
  * The props for the HomeAuthenticated component.
  */
 interface HomeAuthenticatedProps {
-    accessToken: string; // The access token for the authenticated user
-    tokenExpiration: number; // The expiration time of the token in seconds
+    accessToken: string;
+    tokenExpiration: number;
 }
 
 async function fetchThreadsUsername (accessToken: string): Promise<string> {
     return getThreadsUsername(accessToken);
 }
 
-async function savePrompt (prompt: string): Promise<string> {
-    const res = await fetch('/api/gemini-generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
-    });
-
-    const data = await res.json();
-    if (res.ok) {
-        return data.promptText;
-    } else {
-        throw new Error(data.error || 'Failed to save prompt');
-    }
-}
-
 async function fetchActivePrompt (accessToken: string): Promise<string | null> {
     return getActivePrompt(accessToken);
+}
+
+async function fetchScheduledPost (accessToken: string): Promise<IScheduledPost | null> {
+    return getScheduledPostForUser(accessToken);
 }
 
 const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, tokenExpiration }) => {
@@ -43,21 +35,70 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
     const [responseText, setResponseText] = useState("");
     const [responseStatus, setResponseStatus] = useState<'idle' | 'success' | 'error'>('idle');
     const [activePrompt, setActivePrompt] = useState<string | null>(null);
+    const [scheduledPost, setScheduledPost] = useState<IScheduledPost | null>(null);
+    const [clearLoading, setClearLoading] = useState(false);
+    const [clearError, setClearError] = useState('');
+    const [loggingOut, setLoggingOut] = useState(false); // New state for logout loading
 
     useEffect(() => {
         setLoading(true);
         Promise.all([
             fetchThreadsUsername(accessToken),
             fetchActivePrompt(accessToken),
-        ]).then(([username, prompt]) => {
+            fetchScheduledPost(accessToken),
+        ]).then(([username, prompt, schedule]) => {
             setUsername(username);
             setActivePrompt(prompt);
-        }).catch(() => {
+            setScheduledPost(schedule);
+        }).catch((err) => {
+            console.error("Error fetching initial data:", err);
             setUsername("");
             setActivePrompt(null);
+            setScheduledPost(null);
         }).finally(() => setLoading(false));
 
     }, [accessToken]);
+
+    const handleClearSchedule = async () => {
+        setClearLoading(true);
+        setClearError('');
+        try {
+            const res = await fetch('/api/clear-schedule', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setScheduledPost(null); // Clear the schedule from state
+                setClearError('Schedule cleared successfully!');
+            } else {
+                setClearError(data.error || 'Failed to clear schedule.');
+            }
+        } catch (e) {
+            setClearError('Failed to clear schedule.');
+        } finally {
+            setClearLoading(false);
+        }
+    };
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+            const res = await fetch('/api/auth/logout', {
+                method: 'POST',
+            });
+            if (res.ok) {
+                // Redirect to home page or login page after successful logout
+                window.location.href = '/';
+            } else {
+                console.error("Logout failed:", await res.json());
+                setLoggingOut(false); // Reset loading state on error
+            }
+        } catch (error) {
+            console.error("Error during logout:", error);
+            setLoggingOut(false); // Reset loading state on error
+        }
+    };
 
     if (loading) {
         return (
@@ -81,6 +122,40 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
                 ) : (
                     <p className="text-gray-500 dark:text-gray-400">You don't have an active prompt yet.</p>
                 )}
+
+                <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2 mt-4">Current Posting Schedule</h3>
+                {scheduledPost ? (
+                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl p-4 flex flex-col gap-2">
+                        <p className="text-gray-900 dark:text-gray-100">
+                            <strong>Type:</strong> {scheduledPost.scheduleType.charAt(0).toUpperCase() + scheduledPost.scheduleType.slice(1)}
+                        </p>
+                        {scheduledPost.scheduleType === 'custom' && (
+                            <p className="text-gray-900 dark:text-gray-100">
+                                <strong>Interval:</strong> Every {scheduledPost.intervalValue} {scheduledPost.intervalUnit}
+                            </p>
+                        )}
+                        <p className="text-gray-900 dark:text-gray-100">
+                            <strong>Time of Day:</strong> {scheduledPost.timeOfDay}
+                        </p>
+                        <p className="text-gray-900 dark:text-gray-100">
+                            <strong>Next Post:</strong> {new Date(scheduledPost.nextScheduledAt).toLocaleString()}
+                        </p>
+                        <p className="text-gray-900 dark:text-gray-100">
+                            <strong>Status:</strong> {scheduledPost.status.charAt(0).toUpperCase() + scheduledPost.status.slice(1)}
+                        </p>
+                        <button
+                            className="bg-red-500 text-white px-4 py-2 rounded-lg shadow hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed mt-4"
+                            onClick={handleClearSchedule}
+                            disabled={clearLoading}
+                        >
+                            {clearLoading ? 'Clearing...' : 'Clear Schedule'}
+                        </button>
+                        {clearError && <div className="text-red-500 text-center mt-2">{clearError}</div>}
+                    </div>
+                ) : (
+                    <p className="text-gray-500 dark:text-gray-400">No recurring post schedule set.</p>
+                )}
+
                 <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2 mt-4">Set a New Prompt</h3>
                 <form action={async (formData) => {
                     const prompt = formData.get('prompt') as string;
@@ -90,7 +165,7 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
                         return;
                     }
                     try {
-                        const savedPrompt = await savePrompt(prompt);
+                        const savedPrompt = await savePrompt(prompt, accessToken);
                         setActivePrompt(savedPrompt);
                         setResponseText("Prompt saved successfully!");
                         setResponseStatus('success');
@@ -115,37 +190,15 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
                         </button>
                     </div>
                 </form>
-                {activePrompt && (
-                    <div className="w-full flex flex-col gap-4 justify-center items-center mt-4">
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const res = await fetch('/api/gemini-generate/preview', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ prompt: activePrompt }),
-                                    });
-                                    const data = await res.json();
-                                    if (res.ok) {
-                                        setResponseText(data.quoteText);
-                                        setResponseStatus('success');
-                                    } else {
-                                        throw new Error(data.error || 'Failed to generate preview');
-                                    }
-                                } catch (error) {
-                                    console.error("Error generating preview:", error);
-                                    setResponseText((error as Error).message);
-                                    setResponseStatus('error');
-                                }
-                            }}
-                            className="bg-green-500 dark:bg-green-700 hover:bg-green-600 dark:hover:bg-green-800 text-white font-medium mt-2 border rounded-lg px-4 py-2 transition shadow">
-                            Preview Gemini's Response
-                        </button>
-                    </div>
-                )}
+
+                <div className="w-full flex flex-col gap-4 justify-center items-center mt-4">
+                    <h3 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2">Actions for Active Prompt</h3>
+                    <GeminiQuoteGenerator activePrompt={activePrompt} />
+                </div>
+
                 {responseStatus !== 'idle' && (
-                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl p-4 mt-4 flex items-start">
-                        <h4 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-1">Response:</h4>
+                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-xl p-4 mt-4">
+                        <h4 className="font-bold text-lg text-gray-800 dark:text-gray-100 mb-2">Response:</h4>
                         <div className="flex items-center">
                             {responseStatus === 'success' && <span className="text-2xl mr-2">✅</span>}
                             {responseStatus === 'error' && <span className="text-2xl mr-2">❌</span>}
@@ -158,6 +211,13 @@ const HomeAuthenticated: React.FC<HomeAuthenticatedProps> = ({ accessToken, toke
                 <a href="/threads/delete" className="text-sm text-gray-500 dark:text-gray-400 hover:underline">
                     Data Deletion Instructions
                 </a>
+                <button
+                    onClick={handleLogout}
+                    disabled={loggingOut}
+                    className="ml-4 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-lg shadow hover:bg-gray-300 dark:hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {loggingOut ? 'Logging out...' : 'Logout'}
+                </button>
             </div>
             <TokenExpirationTimer expiresAt={tokenExpiration} />
         </div>

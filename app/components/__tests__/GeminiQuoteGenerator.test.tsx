@@ -14,56 +14,56 @@ describe('GeminiQuoteGenerator', () => {
     });
 
     it('should render the generate button', () => {
-        render(<GeminiQuoteGenerator />);
-        const buttonElement = screen.getByRole('button', { name: /Generate Motivational Quote/i });
+        render(<GeminiQuoteGenerator activePrompt="Test Prompt" />);
+        const buttonElement = screen.getByRole('button', { name: /Preview Gemini's Response/i });
         expect(buttonElement).toBeInTheDocument();
     });
 
     it('should show loading state when generating a quote', async () => {
         (fetch as jest.Mock).mockResolvedValueOnce({ ok: true, json: async () => ({}) });
-        render(<GeminiQuoteGenerator />);
-        const buttonElement = screen.getByRole('button', { name: /Generate Motivational Quote/i });
+        render(<GeminiQuoteGenerator activePrompt="Test Prompt" />);
+        const buttonElement = screen.getByRole('button', { name: /Preview Gemini's Response/i });
 
         act(() => {
             fireEvent.click(buttonElement);
         });
 
-        expect(screen.getByRole('button', { name: /Generating.../i })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /Generating Preview.../i })).toBeInTheDocument();
         expect(buttonElement).toBeDisabled();
 
         await waitFor(() => {
-            expect(screen.queryByRole('button', { name: /Generating.../i })).not.toBeInTheDocument();
+            expect(screen.queryByRole('button', { name: /Generating Preview.../i })).not.toBeInTheDocument();
         });
     });
 
-    it('should generate a quote and call onQuoteGenerated on success', async () => {
-        const mockQuote = 'This is a new quote.';
+    it('should generate a quote and display it in preview', async () => {
+        const mockQuote = 'Simulated Gemini response quote.';
         (fetch as jest.Mock).mockResolvedValueOnce({
             ok: true,
             json: async () => ({ quoteText: mockQuote }),
         });
 
-        render(<GeminiQuoteGenerator onQuoteGenerated={mockOnQuoteGenerated} />);
-        const buttonElement = screen.getByRole('button', { name: /Generate Motivational Quote/i });
+        render(<GeminiQuoteGenerator activePrompt="Test Prompt" />);
+        const buttonElement = screen.getByRole('button', { name: /Preview Gemini's Response/i });
 
         await act(async () => {
             fireEvent.click(buttonElement);
         });
 
         await waitFor(() => {
-            expect(mockOnQuoteGenerated).toHaveBeenCalledWith(mockQuote);
+            expect(screen.getByText(`"${mockQuote}"`)).toBeInTheDocument();
         });
     });
 
     it('should show an error message from the server', async () => {
         const errorMessage = 'Server error';
         (fetch as jest.Mock).mockResolvedValueOnce({
-            ok: true,
+            ok: false, // Simulate server error
             json: async () => ({ error: errorMessage }),
         });
 
-        render(<GeminiQuoteGenerator />);
-        const buttonElement = screen.getByRole('button', { name: /Generate Motivational Quote/i });
+        render(<GeminiQuoteGenerator activePrompt="Test Prompt" />);
+        const buttonElement = screen.getByRole('button', { name: /Preview Gemini's Response/i });
 
         await act(async () => {
             fireEvent.click(buttonElement);
@@ -77,15 +77,15 @@ describe('GeminiQuoteGenerator', () => {
     it('should show a generic error message on network failure', async () => {
         (fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
 
-        render(<GeminiQuoteGenerator />);
-        const buttonElement = screen.getByRole('button', { name: /Generate Motivational Quote/i });
+        render(<GeminiQuoteGenerator activePrompt="Test Prompt" />);
+        const buttonElement = screen.getByRole('button', { name: /Preview Gemini's Response/i });
 
         await act(async () => {
             fireEvent.click(buttonElement);
         });
 
         await waitFor(() => {
-            expect(screen.getByText('Failed to generate quote')).toBeInTheDocument();
+            expect(screen.getByText('Failed to generate preview.')).toBeInTheDocument();
         });
     });
 });
