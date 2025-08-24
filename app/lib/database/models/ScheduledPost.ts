@@ -2,7 +2,7 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IScheduledPost extends Document {
     userId: mongoose.Types.ObjectId; // Reference to the User model
-    scheduleType: 'daily' | 'weekly' | 'custom'; // Type of recurrence
+    scheduleType: 'daily' | 'weekly' | 'monthly' | 'custom'; // Type of recurrence
     intervalValue?: number; // e.g., 2 for every 2 days (if custom)
     intervalUnit?: 'hours' | 'days' | 'weeks'; // e.g., 'days' (if custom)
     timeOfDay: string; // HH:MM format for daily/weekly/custom posts
@@ -15,7 +15,7 @@ export interface IScheduledPost extends Document {
 
 const ScheduledPostSchema: Schema = new Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    scheduleType: { type: String, enum: ['daily', 'weekly', 'custom'], required: true },
+    scheduleType: { type: String, enum: ['daily', 'weekly', 'monthly', 'custom'], required: true },
     intervalValue: { type: Number },
     intervalUnit: { type: String, enum: ['hours', 'days', 'weeks'] },
     timeOfDay: { type: String, required: true }, // Stored as "HH:MM"

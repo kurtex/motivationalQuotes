@@ -3,8 +3,7 @@ import { getThreadsCookie } from "../../../lib/threads-api/threads-posts/actions
 import { getMetaUserIdByThreadsAccessToken } from "../../../lib/database/actions";
 import User from "../../../lib/database/models/User";
 import Quote from "../../../lib/database/models/Quote";
-import { GeminiClient } from "../../../lib/ai/geminiClient";
-import { GeminiModel } from "../../../lib/ai/geminiModels";
+import { generateGeminiStream } from "../../../lib/ai/geminiClient"; // Changed import
 
 export async function POST(req: NextRequest) {
     const { prompt } = await req.json();
@@ -28,18 +27,34 @@ export async function POST(req: NextRequest) {
 
         const quotesToAvoid = recentQuotes.map((q: any) => q.text);
 
-        const geminiTextClient = new GeminiClient(GeminiModel.GEMINI_2_0_FLASH);
-
         let currentPrompt = `Generate a response based on the user's request, which is enclosed in <user_prompt> tags: <user_prompt>${prompt}</user_prompt>`;
         if (quotesToAvoid.length > 0) {
             const avoidList = quotesToAvoid.map((q) => `- \"${q}\"`).join("\n");
             currentPrompt += `\n\nIMPORTANT: Do not generate a response similar to any of the following, which are enclosed in <avoid_list> tags:\n<avoid_list>\n${avoidList}\n</avoid_list>`;
         }
 
-        const text = await geminiTextClient.generateContent(currentPrompt);
+        // Changed to use the streaming function
+        const stream = await generateGeminiStream(currentPrompt);
 
-        return NextResponse.json({ quoteText: text });
+        const readableStream = new ReadableStream({
+            async start(controller) {
+                for await (const chunk of stream) {
+                    const text = chunk.text();
+                    controller.enqueue(new TextEncoder().encode(text));
+                }
+                controller.close();
+            },
+        });
+
+        return new Response(readableStream, {
+            headers: {
+                "Content-Type": "text/plain; charset=utf-8",
+            },
+        });
+
     } catch (error: any) {
+        // It's important to handle errors inside the stream as well, but for now, this will catch initial setup errors.
+        console.error("Error in preview stream route:", error);
         return NextResponse.json(
             { error: error.message || "Failed to generate preview" },
             { status: 500 }

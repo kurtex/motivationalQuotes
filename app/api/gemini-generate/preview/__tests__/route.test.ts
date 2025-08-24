@@ -1,65 +1,77 @@
 import { POST } from '../route';
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { getThreadsCookie } from '@/app/lib/threads-api/threads-posts/actions';
 import { getMetaUserIdByThreadsAccessToken } from '@/app/lib/database/actions';
 import User from '@/app/lib/database/models/User';
 import Quote from '@/app/lib/database/models/Quote';
-import { GeminiClient } from '@/app/lib/ai/geminiClient';
+import { generateGeminiStream } from '@/app/lib/ai/geminiClient';
 
-// Mock external dependencies
-jest.mock('next/server', () => ({
-    NextResponse: {
-        json: jest.fn((data, options) => ({
-            json: () => Promise.resolve(data),
-            status: options?.status || 200,
-        })),
-    },
-}));
+// Mock dependencies
 jest.mock('@/app/lib/threads-api/threads-posts/actions');
 jest.mock('@/app/lib/database/actions');
 jest.mock('@/app/lib/database/models/User');
 jest.mock('@/app/lib/database/models/Quote');
 jest.mock('@/app/lib/ai/geminiClient');
 
+// Mock NextResponse separately to handle the stream case
+jest.mock('next/server', () => ({
+  ...jest.requireActual('next/server'),
+  NextResponse: {
+    json: jest.fn((data, init) => ({
+      json: () => Promise.resolve(data),
+      status: init?.status || 200,
+      headers: new Headers(init?.headers),
+    })),
+  },
+}));
+
+
 const mockedGetThreadsCookie = getThreadsCookie as jest.Mock;
 const mockedGetMetaUserIdByThreadsAccessToken = getMetaUserIdByThreadsAccessToken as jest.Mock;
 const mockedUserFindOne = User.findOne as jest.Mock;
 const mockedQuoteFind = Quote.find as jest.Mock;
-const mockGeminiClient = GeminiClient as jest.Mock;
-const mockGenerateContent = jest.fn();
+const mockedGenerateGeminiStream = generateGeminiStream as jest.Mock;
 
 describe('POST /api/gemini-generate/preview', () => {
-    let mockRequest: Partial<NextRequest>;
+  let mockRequest: Partial<NextRequest>;
 
-    beforeEach(() => {
-        jest.clearAllMocks();
-        mockRequest = {
-            json: jest.fn().mockResolvedValue({}),
-        };
-        mockedGetThreadsCookie.mockResolvedValue('mock-access-token');
-        mockedGetMetaUserIdByThreadsAccessToken.mockResolvedValue('mock-meta-user-id');
-        mockedUserFindOne.mockResolvedValue({ _id: 'mock-user-db-id', active_prompt: 'prompt-id' });
-        mockedQuoteFind.mockReturnValue({
-            sort: jest.fn().mockReturnThis(),
-            limit: jest.fn().mockReturnThis(),
-            select: jest.fn().mockResolvedValue([]),
-        });
-        mockGeminiClient.mockImplementation(() => ({
-            generateContent: mockGenerateContent,
-        }));
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockRequest = {
+      json: jest.fn().mockResolvedValue({}),
+    };
+    mockedGetThreadsCookie.mockResolvedValue('mock-access-token');
+    mockedGetMetaUserIdByThreadsAccessToken.mockResolvedValue('mock-meta-user-id');
+    mockedUserFindOne.mockResolvedValue({ _id: 'mock-user-db-id', active_prompt: 'prompt-id' });
+    mockedQuoteFind.mockReturnValue({
+      sort: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      select: jest.fn().mockResolvedValue([]),
     });
+  });
 
-    it('should generate a preview successfully', async () => {
-        const mockPrompt = "A preview prompt";
-        const mockGeneratedText = "A generated preview";
-        mockRequest.json = jest.fn().mockResolvedValue({ prompt: mockPrompt });
-        mockGenerateContent.mockResolvedValue(mockGeneratedText);
+  it('should return a streaming response on success', async () => {
+    const mockPrompt = 'A preview prompt';
+    mockRequest.json = jest.fn().mockResolvedValue({ prompt: mockPrompt });
 
-        const response = await POST(mockRequest as NextRequest);
-        const jsonResponse = await response.json();
+    // Mock the async generator stream
+    async function* mockStream() {
+      yield { text: () => 'Hello ' };
+      yield { text: () => 'World' };
+    }
+    mockedGenerateGeminiStream.mockResolvedValue(mockStream());
 
-        expect(response.status).toBe(200);
-        expect(jsonResponse).toEqual({ quoteText: mockGeneratedText });
-        expect(mockGenerateContent).toHaveBeenCalled();
-    });
+    const response = await POST(mockRequest as NextRequest);
+
+    expect(response).toBeInstanceOf(Response);
+    expect(response.status).toBe(200);
+    expect(response.body).toBeInstanceOf(ReadableStream);
+    expect(mockedGenerateGeminiStream).toHaveBeenCalledWith(expect.stringContaining(mockPrompt));
+  });
+
+  it('should return 401 if no access token is found', async () => {
+    mockedGetThreadsCookie.mockResolvedValue(null);
+    const response = await POST(mockRequest as NextRequest);
+    expect(response.status).toBe(401);
+  });
 });

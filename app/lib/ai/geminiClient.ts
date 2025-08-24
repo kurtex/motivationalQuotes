@@ -59,3 +59,65 @@ export class GeminiClient {
 		return result.embedding.values;
 	}
 }
+
+/**
+ * Generates a streaming response from Gemini model.
+ * @param prompt The prompt to send to the model.
+ * @returns A ReadableStream of text chunks.
+ * @throws Specific error messages based on the type of failure.
+ */
+export async function generateGeminiStream(prompt: string) {
+  if (!prompt || prompt.trim() === "") {
+    throw new Error("Prompt cannot be empty");
+  }
+
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error("GEMINI_API_KEY is not configured");
+  }
+
+  try {
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    const model = genAI.getGenerativeModel({ 
+      model: GeminiModel.GEMINI_2_0_FLASH,
+      generationConfig: {
+        maxOutputTokens: 1000,
+        temperature: 0.7,
+      }
+    });
+    
+    try {
+      const result = await model.generateContentStream(prompt);
+      return result.stream;
+    } catch (modelError: any) {
+      // Handle specific API errors
+      if (modelError.message?.includes("quota")) {
+        console.error("Gemini API quota exceeded:", modelError);
+        throw new Error("API quota exceeded. Please try again later.");
+      } else if (modelError.message?.includes("rate")) {
+        console.error("Gemini API rate limit reached:", modelError);
+        throw new Error("Rate limit reached. Please try again in a few moments.");
+      } else if (modelError.message?.includes("content filtered") || modelError.message?.includes("blocked")) {
+        console.error("Content filtered by Gemini API:", modelError);
+        throw new Error("The requested content was filtered by safety systems.");
+      } else {
+        console.error("Error in Gemini model generation:", modelError);
+        throw new Error(`Model error: ${modelError.message || "Unknown model error"}`); 
+      }
+    }
+  } catch (error: any) {
+    // Handle general errors (network, configuration, etc)
+    if (error.message?.includes("GEMINI_API_KEY")) {
+      // Don't log API key errors to console as they're already handled above
+      throw error;
+    } else if (error.name === "AbortError") {
+      console.error("Request to Gemini API was aborted:", error);
+      throw new Error("Request timed out. Please try again.");
+    } else if (error.name === "TypeError" && error.message?.includes("fetch")) {
+      console.error("Network error when connecting to Gemini API:", error);
+      throw new Error("Network error. Please check your connection and try again.");
+    } else {
+      console.error("Unexpected error generating Gemini stream:", error);
+      throw new Error(error.message || "Failed to generate content stream from Gemini.");
+    }
+  }
+}
