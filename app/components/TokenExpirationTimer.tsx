@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface TokenExpirationTimerProps {
     expiresAt: number; // Unix timestamp in seconds
 }
 
 const TokenExpirationTimer: React.FC<TokenExpirationTimerProps> = ({ expiresAt }) => {
-    const calculateTimeLeft = () => {
+    const calculateTimeLeft = useCallback(() => {
         const now = Math.floor(Date.now() / 1000);
         const difference = expiresAt - now;
 
@@ -21,7 +21,7 @@ const TokenExpirationTimer: React.FC<TokenExpirationTimerProps> = ({ expiresAt }
         const seconds = Math.floor(difference % 60);
 
         return { days, hours, minutes, seconds, expired: false };
-    };
+    }, [expiresAt]);
 
     const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
@@ -31,7 +31,7 @@ const TokenExpirationTimer: React.FC<TokenExpirationTimerProps> = ({ expiresAt }
         }, 1000);
 
         return () => clearInterval(timer);
-    }, [expiresAt]);
+    }, [calculateTimeLeft]);
 
     if (timeLeft.expired) {
         return (

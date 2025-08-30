@@ -28,7 +28,11 @@ function calculateNextScheduledAt(
 		nextDate.setDate(nextDate.getDate() + 1);
 	}
 
-	if (scheduleType === "custom" && intervalValue && intervalUnit) {
+	if (scheduleType === "weekly") {
+		nextDate.setDate(nextDate.getDate() + 7);
+	} else if (scheduleType === "monthly") {
+		nextDate.setMonth(nextDate.getMonth() + 1);
+	} else if (scheduleType === "custom" && intervalValue && intervalUnit) {
 		const now = new Date();
 		let currentIntervalDate = new Date(now);
 		currentIntervalDate.setHours(hours, minutes, 0, 0);
@@ -67,7 +71,7 @@ export async function POST(req: NextRequest) {
 
 		if (!scheduleType || !timeOfDay) {
 			return NextResponse.json(
-				{ error: "Schedule type and time of day are required" },
+				{ error: `Schedule type or time of day missing. scheduleType: ${scheduleType}, timeOfDay: ${timeOfDay}` },
 				{ status: 400 }
 			);
 		}
@@ -137,18 +141,6 @@ export async function POST(req: NextRequest) {
 				status: "active",
 			});
 			await scheduledPost.save();
-		}
-
-		const overlappingSchedule = await ScheduledPost.findOne({
-			userId: user._id,
-			nextScheduledAt: { $gte: new Date() },
-		});
-		if (overlappingSchedule) {
-			console.log("Overlapping schedule details:", overlappingSchedule);
-			return NextResponse.json(
-				{ error: "An overlapping schedule already exists." },
-				{ status: 400 }
-			);
 		}
 
 		return NextResponse.json(

@@ -143,7 +143,7 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
                 {error && <div className="text-red-500 text-center text-sm">{error}</div>}
                 {previewResponse && (
                     <div className="w-full bg-gray-100 dark:bg-gray-800/60 p-3 rounded-md shadow-inner text-center">
-                        <p className="text-md font-medium text-gray-800 dark:text-gray-200">"{previewResponse}"</p>
+                        <p className="text-md font-medium text-gray-800 dark:text-gray-200">&quot;{previewResponse}&quot;</p>
                     </div>
                 )}
             </div>
