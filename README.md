@@ -2,28 +2,28 @@
 
 [![Continuous Integration](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml/badge.svg)](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml)
 
-A modern web application built with Next.js that generates unique motivational quotes in Spanish using the Google Gemini API. It includes user authentication through the Threads API and an automated system for token management.
+A modern web application built with Next.js that generates unique motivational quotes in Spanish using the Google Gemini API. It includes user authentication via Threads, stores data in MongoDB, and features an automated system for user token management.
 
 ## ✨ Key Features
 
-- **AI Content Generation:** Creates original, high-quality motivational quotes.
-- **Social Authentication:** Secure integration with the Threads API for user registration and login.
-- **Persistent Database:** Stores users and generated quotes in MongoDB.
-- **Automated Token Management:** A robust system that automatically refreshes Threads API tokens to keep user sessions active.
-- **Data Deletion:** Implements the required Meta endpoint for users to request deletion of their data.
-- **Easy Deployment:** Optimized for easy deployment on platforms like Vercel.
+- **AI Content Generation**: Creates original, high-quality motivational quotes in Spanish using Google Gemini.
+- **Post Scheduling**: Allows users to schedule when their generated quotes should be published.
+- **Social Authentication**: Secure integration with the Threads API for user registration and login (OAuth 2.0).
+- **Persistent Database**: Stores users, prompts, quotes, and post schedules in MongoDB.
+- **Automated Tasks**: Uses Vercel Cron Jobs to handle token refreshes and scheduled posting.
+- **Data Deletion**: Implements the required Meta endpoint for users to request deletion of their data.
 
 ## 🛠️ Tech Stack
 
-- **Framework:** [Next.js](https://nextjs.org/) (React)
-- **Language:** [TypeScript](https://www.typescriptlang.org/)
-- **Database:** [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
-- **External APIs:**
+- **Framework**: [Next.js](https://nextjs.org/) (App Router)
+- **Language**: [TypeScript](https://www.typescriptlang.org/)
+- **Database**: [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
+- **External APIs**:
   - [Google Gemini API](https://ai.google.dev/)
   - [Threads API](https://developers.facebook.com/docs/threads)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/)
-- **Testing:** [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
-- **Automation:** [GitHub Actions](https://github.com/features/actions)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Testing**: [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
+- **Automation**: [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs)
 
 ---
 
@@ -33,9 +33,10 @@ Follow these steps to set up and run the project in your local environment.
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 20 or higher)
-- [pnpm](https://pnpm.io/) (recommended), npm, or yarn
+- [Node.js](https://nodejs.org/) (version 20.x)
+- [pnpm](https://pnpm.io/)
 - A [MongoDB](https://www.mongodb.com/) instance (local or cloud)
+- A configured Threads App for OAuth credentials.
 
 ### 1. Clone the Repository
 
@@ -52,31 +53,18 @@ pnpm install
 
 ### 3. Configure Environment Variables
 
-Create a `.env` file in the project root and add the following variables. You can use the `.env.example` file as a guide if it exists.
+Create a `.env.local` file in the project root and add the following variables.
 
-```env
-# Google Gemini API Key
-GEMINI_API_KEY="YOUR_GEMINI_KEY"
-
-# Connection URI for your MongoDB database
-MONGO_URI="mongodb://localhost:27017/database_name"
-
-# Secret to protect the cron job endpoint
-CRON_SECRET="A_STRONG_AND_RANDOM_SECRET"
-
-# Threads API Credentials
-NEXT_PUBLIC_CLIENT_ID="YOUR_THREADS_CLIENT_ID"
-CLIENT_SECRET="YOUR_THREADS_CLIENT_SECRET"
-
-# The base URL of your application
-NEXT_PUBLIC_BASE_URL="http://localhost:3000"
-
-# A random string to use for the OAuth state
-NEXT_PUBLIC_API_STATE="A_RANDOM_STRING"
-
-# The email address for support requests
-NEXT_PUBLIC_SUPPORT_EMAIL="YOUR_SUPPORT_EMAIL"
-```
+| Variable | Description |
+| :--- | :--- |
+| `GEMINI_API_KEY` | Your API key for Google Gemini. |
+| `MONGODB_URI` | Connection URI for your MongoDB database. |
+| `CLIENT_SECRET` | The '''App Secret''' from your Threads application. |
+| `CRON_SECRET` | A strong, random secret to protect automated task endpoints. |
+| `NEXT_PUBLIC_CLIENT_ID` | The '''App ID''' from your Threads application. |
+| `NEXT_PUBLIC_BASE_URL`| The base URL of your application (e.g., `http://localhost:3000`). |
+| `NEXT_PUBLIC_API_STATE` | A random string to prevent CSRF attacks in the OAuth flow. |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Public email for support and data deletion requests. |
 
 ### 4. Run the Application
 
@@ -94,31 +82,16 @@ pnpm test
 
 ---
 
-## ⚙️ Automated Tasks (Cron Job)
+## ⚙️ Automated Tasks (Vercel Cron Jobs)
 
-The application uses a cron job system to automatically refresh Threads API access tokens, which expire every 60 days.
+This project relies on Vercel Cron Jobs to handle all automated and scheduled tasks, ensuring the application runs autonomously. The configuration is defined in the `vercel.json` file.
 
-This process is managed by a **GitHub Action** defined in `.github/workflows/refresh_tokens.yml`.
+- **Token Refresh**: A cron job runs daily to refresh expiring Threads API tokens, ensuring user sessions remain active.
+  - **Endpoint**: `POST /api/threads/refresh-tokens`
+  - **Schedule**: Runs once a day (`0 3 * * *`).
 
-The GitHub Action runs daily and securely calls the `POST /api/threads/refresh-tokens` endpoint to refresh tokens that are about to expire.
+- **Scheduled Post Publishing**: A cron job runs every minute to check for and publish any posts that users have scheduled.
+  - **Endpoint**: `POST /api/check-scheduled-posts`
+  - **Schedule**: Runs every minute (`* * * * *`).
 
-### Production Configuration
-
-For the GitHub Action to work correctly in your repository, you must configure the following **Secrets** in the `Settings > Secrets and variables > Actions` section of your repository:
-
-- `PRODUCTION_URL`: The base URL of your application in production (e.g., `https://my-app.vercel.app`).
-- `CRON_SECRET`: The same value you used in your `.env` file.
-
----
-
-## 🚢 Deployment
-
-The easiest way to deploy this application is using the [Vercel platform](https://vercel.com/new), from the creators of Next.js.
-
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fjjvillarreal%2Fmotivational-quotes)
-
-Don't forget to set up the environment variables in your Vercel project before deploying.
-
-## 🤝 Contributions
-
-Contributions are welcome. If you have an idea or find a bug, please open an *issue* or submit a *pull request*.
+To protect these endpoints, ensure the `CRON_SECRET` environment variable is configured correctly in your Vercel project settings.

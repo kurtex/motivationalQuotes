@@ -242,7 +242,7 @@ export default function SchedulerDashboard () {
   return (
     <div className="min-h-screen p-3">
       <div className="max-w-6xl mx-auto space-y-4">
-        <Header onLogout={handleLogout} />
+        <Header onLogout={handleLogout} isAutomated={!!scheduledPost} />
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-2 space-y-4">
@@ -274,7 +274,7 @@ export default function SchedulerDashboard () {
               isPreviewing={isPreviewing}
               isExecuting={isExecuting}
             />
-            <StatusCard />
+            <StatusCard isOnline={!!scheduledPost} />
           </div>
         </div>
       </div>
