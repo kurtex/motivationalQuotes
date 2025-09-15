@@ -8,9 +8,9 @@ const ONE_DAY_IN_SECONDS = 86400;
 const BATCH_SIZE = 100; // Process 100 tokens at a time
 
 export async function POST(req: NextRequest) {
-	// Simple protection: require a secret header
-	const secret = req.headers.get("x-cron-secret");
-	if (secret !== process.env.CRON_SECRET) {
+	// Protection: require the Vercel CRON_SECRET
+	const authHeader = req.headers.get("authorization");
+	if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 

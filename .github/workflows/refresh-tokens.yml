@@ -1,0 +1,17 @@
+name: Refresh Expiring Tokens
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+jobs:
+  refresh-tokens:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call refresh-tokens endpoint
+        run: |
+          curl -X POST \
+            "${{ secrets.NEXT_PUBLIC_BASE_URL }}/api/threads/refresh-tokens" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
+

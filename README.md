@@ -10,7 +10,7 @@ A modern web application built with Next.js that generates unique motivational q
 - **Post Scheduling**: Allows users to schedule when their generated quotes should be published.
 - **Social Authentication**: Secure integration with the Threads API for user registration and login (OAuth 2.0).
 - **Persistent Database**: Stores users, prompts, quotes, and post schedules in MongoDB.
-- **Automated Tasks**: Uses Vercel Cron Jobs to handle token refreshes and scheduled posting.
+- **Automated Tasks**: Uses GitHub Actions for scheduled tasks like token refreshes and post publishing.
 - **Data Deletion**: Implements the required Meta endpoint for users to request deletion of their data.
 
 ## 🛠️ Tech Stack
@@ -23,7 +23,7 @@ A modern web application built with Next.js that generates unique motivational q
   - [Threads API](https://developers.facebook.com/docs/threads)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 - **Testing**: [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
-- **Automation**: [Vercel Cron Jobs](https://vercel.com/docs/cron-jobs)
+- **Automation**: [GitHub Actions](https://github.com/features/actions)
 
 ---
 
@@ -58,7 +58,78 @@ Create a `.env.local` file in the project root and add the following variables.
 | Variable | Description |
 | :--- | :--- |
 | `GEMINI_API_KEY` | Your API key for Google Gemini. |
-| `MONGODB_URI` | Connection URI for your MongoDB database. |
+| `MONGO_URI` | Connection URI for your MongoDB database. |
+| `CLIENT_SECRET` | The ''''App Secret'''' from your Threads application. |
+| `CRON_SECRET` | A strong, random secret to protect automated task endpoints. |
+| `NEXT_PUBLIC_CLIENT_ID` | The ''''App ID'''' from your Threads application. |
+| `NEXT_PUBLIC_BASE_URL`| The base URL of your application (e.g., `http://localhost:3000`). |
+| `NEXT_PUBLIC_API_STATE` | A random string to prevent CSRF attacks in the OAuth flow. |
+| `NEXT_PUBLIC_SUPPORT_EMAIL` | Public email for support and data deletion requests. |
+
+### 4. Run the Application
+
+```bash
+pnpm dev
+```
+
+The application will be available at [http://localhost:3000](http://localhost:3000).
+
+### 5. Run Tests
+
+```bash
+pnpm test
+```
+
+---
+
+## ⚙️ Automated Tasks (GitHub Actions)
+
+This project relies on GitHub Actions for all automated and scheduled tasks. The workflow configurations are defined in the `.github/workflows/` directory.
+
+- **Token Refresh**: A workflow runs daily to refresh expiring Threads API tokens, ensuring user sessions remain active.
+  - **Workflow**: `refresh-tokens.yml`
+  - **Schedule**: Runs once a day (`0 3 * * *`).
+
+- **Scheduled Post Publishing**: A workflow runs every 5 minutes to check for and publish any posts that users have scheduled.
+  - **Workflow**: `check-posts.yml`
+  - **Schedule**: Runs every 5 minutes (`*/5 * * * *`).
+
+To protect the API endpoints called by these workflows, ensure the `CRON_SECRET` environment variable is configured as a repository secret in your GitHub project settings.
+
+---
+
+## 🚀 Getting Started
+
+Follow these steps to set up and run the project in your local environment.
+
+### Prerequisites
+
+- [Node.js](https://nodejs.org/) (version 20.x)
+- [pnpm](https://pnpm.io/)
+- A [MongoDB](https://www.mongodb.com/) instance (local or cloud)
+- A configured Threads App for OAuth credentials.
+
+### 1. Clone the Repository
+
+```bash
+git clone https://github.com/jjvillarreal/motivational-quotes.git
+cd motivational-quotes
+```
+
+### 2. Install Dependencies
+
+```bash
+pnpm install
+```
+
+### 3. Configure Environment Variables
+
+Create a `.env.local` file in the project root and add the following variables.
+
+| Variable | Description |
+| :--- | :--- |
+| `GEMINI_API_KEY` | Your API key for Google Gemini. |
+| `MONGO_URI` | Connection URI for your MongoDB database. |
 | `CLIENT_SECRET` | The '''App Secret''' from your Threads application. |
 | `CRON_SECRET` | A strong, random secret to protect automated task endpoints. |
 | `NEXT_PUBLIC_CLIENT_ID` | The '''App ID''' from your Threads application. |

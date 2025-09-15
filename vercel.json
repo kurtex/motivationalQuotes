@@ -1,12 +1,3 @@
 {
-  "crons": [
-    {
-      "path": "/api/check-scheduled-posts",
-      "schedule": "* * * * *"
-    },
-    {
-      "path": "/api/threads/refresh-tokens",
-      "schedule": "0 3 * * *"
-    }
-  ]
+
 }

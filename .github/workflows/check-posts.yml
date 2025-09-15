@@ -1,0 +1,16 @@
+name: Check Scheduled Posts
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  check-posts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call check-scheduled-posts endpoint
+        run: |
+          curl -X POST \
+            "${{ secrets.NEXT_PUBLIC_BASE_URL }}/api/check-scheduled-posts" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
