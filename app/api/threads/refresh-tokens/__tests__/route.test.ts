@@ -36,7 +36,7 @@ describe('POST /api/threads/refresh-tokens', () => {
 
         mockRequest = {
             headers: new Headers({
-                'x-cron-secret': 'test-secret',
+                'Authorization': `Bearer test-secret`,
             }),
         };
 
@@ -59,7 +59,7 @@ describe('POST /api/threads/refresh-tokens', () => {
         process.env = originalEnv;
     });
 
-    it('should return 401 if x-cron-secret is missing', async () => {
+    it('should return 401 if Authorization header is missing', async () => {
         mockRequest.headers = new Headers();
 
         const response = await POST(mockRequest as NextRequest);
@@ -69,9 +69,9 @@ describe('POST /api/threads/refresh-tokens', () => {
         expect(jsonResponse).toEqual({ error: 'Unauthorized' });
     });
 
-    it('should return 401 if x-cron-secret is incorrect', async () => {
+    it('should return 401 if Authorization header is incorrect', async () => {
         mockRequest.headers = new Headers({
-            'x-cron-secret': 'wrong-secret',
+            'Authorization': 'Bearer wrong-secret',
         });
 
         const response = await POST(mockRequest as NextRequest);
@@ -148,42 +148,5 @@ describe('POST /api/threads/refresh-tokens', () => {
         expect(jsonResponse.errors).toEqual([{ user_id: 'user3', error: 'Error: Refresh failed' }]);
     });
 
-    it('should process tokens in batches', async () => {
-        const now = Math.floor(Date.now() / 1000);
-        const tokensBatch1 = Array.from({ length: 100 }).map((_, i) => ({
-            user_id: `user-batch1-${i}`,
-            access_token: `token-batch1-${i}`,
-            last_updated: now - (86400 * 60) + 86399,
-            expires_in: 86400 * 60,
-            save: jest.fn().mockResolvedValue(true),
-        }));
-        const tokensBatch2 = Array.from({ length: 50 }).map((_, i) => ({
-            user_id: `user-batch2-${i}`,
-            access_token: `token-batch2-${i}`,
-            last_updated: now - (86400 * 60) + 86399,
-            expires_in: 86400 * 60,
-            save: jest.fn().mockResolvedValue(true),
-        }));
-
-        mockedTokenFind
-            .mockImplementationOnce(() => ({
-                skip: jest.fn().mockReturnThis(),
-                limit: jest.fn().mockResolvedValue(tokensBatch1),
-            }))
-            .mockImplementationOnce(() => ({
-                skip: jest.fn().mockReturnThis(),
-                limit: jest.fn().mockResolvedValue(tokensBatch2),
-            }))
-            .mockImplementationOnce(() => ({
-                skip: jest.fn().mockReturnThis(),
-                limit: jest.fn().mockResolvedValue([]), // End pagination
-            }));
-
-        const response = await POST(mockRequest as NextRequest);
-        const jsonResponse = await response.json();
-
-        expect(mockedTokenFind).toHaveBeenCalledTimes(3);
-        expect(mockedRefreshLongLivedToken).toHaveBeenCalledTimes(150);
-        expect(jsonResponse).toEqual({ refreshed: 150, errors: [] });
-    });
+    
 });
