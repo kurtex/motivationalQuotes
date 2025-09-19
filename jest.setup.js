@@ -3,7 +3,6 @@ import '@testing-library/jest-dom';
 // Mock Web APIs for Node.js environment
 global.Request = class Request {
   constructor(input, init) {
-    this.url = input;
     this.method = init?.method || 'GET';
     this.headers = new Headers(init?.headers);
     this.body = init?.body;
@@ -35,6 +34,7 @@ global.Headers = class Headers {
     get(key) { return this.headers.get(String(key).toLowerCase()); }
     set(key, value) { this.headers.set(String(key).toLowerCase(), String(value)); }
     has(key) { return this.headers.has(String(key).toLowerCase()); }
+    entries() { return this.headers.entries(); }
     [Symbol.iterator]() { return this.headers.entries(); }
 };
 
