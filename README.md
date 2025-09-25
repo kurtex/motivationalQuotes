@@ -1,168 +1,103 @@
 # Motivational Quote Generator
 
-[![Continuous Integration](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml/badge.svg)](https://github.com/jjvillarreal/motivational-quotes/actions/workflows/ci.yml)
+A Next.js App Router project that helps creators design short-form copy with Google Gemini and auto-publish it on Threads. Users authenticate through Threads OAuth, manage their prompts, and the platform schedules recurring posts for them.
 
-A modern web application built with Next.js that generates unique motivational quotes in Spanish using the Google Gemini API. It includes user authentication via Threads, stores data in MongoDB, and features an automated system for user token management.
+## Key Features
+- **Gemini-powered copy** – generate polished Spanish posts through Google Gemini.
+- **Threads OAuth login** – secure exchange of short-lived codes for long-lived tokens.
+- **Prompt management** – update the active prompt that guides future posts.
+- **Automated publishing** – run scheduled Threads posts via GitLab jobs.
+- **Data deletion compliance** – honour Meta’s callback for account removal.
 
-## ✨ Key Features
+## Tech Stack
+- **Framework**: Next.js (App Router, TypeScript)
+- **Styling**: Tailwind CSS + custom UI primitives
+- **Database**: MongoDB Atlas via Mongoose
+- **AI**: Google Gemini SDK
+- **Scheduling**: GitLab CI/CD scheduled pipelines hitting API routes
+- **Testing**: Jest + React Testing Library
+- **Package manager**: pnpm
 
-- **AI Content Generation**: Creates original, high-quality motivational quotes in Spanish using Google Gemini.
-- **Post Scheduling**: Allows users to schedule when their generated quotes should be published.
-- **Social Authentication**: Secure integration with the Threads API for user registration and login (OAuth 2.0).
-- **Persistent Database**: Stores users, prompts, quotes, and post schedules in MongoDB.
-- **Automated Tasks**: Uses GitHub Actions for scheduled tasks like token refreshes and post publishing.
-- **Data Deletion**: Implements the required Meta endpoint for users to request deletion of their data.
+## Local Development
+1. **Prerequisites**
+   - Node.js 20+
+   - pnpm 9+
+   - MongoDB instance (Atlas or local)
+   - Threads app credentials (App ID, App Secret)
+   - Google Gemini API key
 
-## 🛠️ Tech Stack
+2. **Install dependencies**
+   ```bash
+   pnpm install
+   ```
 
-- **Framework**: [Next.js](https://nextjs.org/) (App Router)
-- **Language**: [TypeScript](https://www.typescriptlang.org/)
-- **Database**: [MongoDB](https://www.mongodb.com/) with [Mongoose](https://mongoosejs.com/)
-- **External APIs**:
-  - [Google Gemini API](https://ai.google.dev/)
-  - [Threads API](https://developers.facebook.com/docs/threads)
-- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-- **Testing**: [Jest](https://jestjs.io/) & [React Testing Library](https://testing-library.com/)
-- **Automation**: [GitHub Actions](https://github.com/features/actions)
+3. **Environment variables** – create `.env.local` with:
+   | Variable | Purpose |
+   | --- | --- |
+   | `GEMINI_API_KEY` | Access token for the Gemini SDK. |
+   | `MONGO_URI` | Connection string for the MongoDB cluster (database `user_tokens`). |
+   | `CLIENT_SECRET` | Threads App Secret used for OAuth exchanges and Meta callbacks. |
+   | `CRON_SECRET` | Shared secret checked by scheduled endpoints. |
+   | `NEXT_PUBLIC_CLIENT_ID` | Threads App ID exposed to the browser for OAuth. |
+   | `NEXT_PUBLIC_BASE_URL` | Public origin that builds redirect URLs. |
+   | `NEXT_PUBLIC_API_STATE` | Random string that validates OAuth callbacks. |
+   | `NEXT_PUBLIC_SUPPORT_EMAIL` | Address shown in the data deletion page. |
 
----
+4. **Run dev server**
+   ```bash
+   pnpm dev
+   ```
+   Visit http://localhost:3000 and complete the Threads login to generate prompts.
 
-## 🚀 Getting Started
+5. **Run tests**
+   ```bash
+   pnpm test
+   ```
 
-Follow these steps to set up and run the project in your local environment.
+## Threads & OAuth Configuration
+1. In Meta’s developer dashboard:
+   - Enable **Web OAuth Login**.
+   - Add `https://<tu-dominio>/redirect` (local: `http://localhost:3000/redirect`) to **Valid OAuth Redirect URIs** – it must match `NEXT_PUBLIC_BASE_URL` + `/redirect`.
+   - Register the data deletion URL `https://<tu-dominio>/api/threads/data-deletion-callback`.
+2. Copy the App ID and App Secret into `NEXT_PUBLIC_CLIENT_ID` and `CLIENT_SECRET`.
+3. Choose a strong `NEXT_PUBLIC_API_STATE` value and reuse it across client/server to reject forged callbacks.
 
-### Prerequisites
+## MongoDB Atlas Setup
+- Create a database user with read/write access to the cluster.
+- Allow Vercel IPs or `0.0.0.0/0` in the Atlas network rules.
+- Use the provided connection string as `MONGO_URI`; the application selects the `user_tokens` database automatically.
 
-- [Node.js](https://nodejs.org/) (version 20.x)
-- [pnpm](https://pnpm.io/)
-- A [MongoDB](https://www.mongodb.com/) instance (local or cloud)
-- A configured Threads App for OAuth credentials.
+## Deployment on Vercel
+1. Import the Git repository and configure the same environment variables listed above in the Production and Preview environments.
+2. Ensure `NEXT_PUBLIC_BASE_URL` matches the live domain (e.g., `https://motivational-quotes.vercel.app`).
+3. Vercel serves over HTTPS by default, which lets the OAuth flow persist the secure Threads cookie.
 
-### 1. Clone the Repository
+## Security Notes
+- Never commit `.env*` files or share secret values outside the deployment pipeline.
+- Rotate `CRON_SECRET`, `CLIENT_SECRET`, and `GEMINI_API_KEY` if you suspect exposure.
+- Limit GitLab schedules and Atlas database users to the minimal roles/IPs needed for automation.
 
-```bash
-git clone https://github.com/jjvillarreal/motivational-quotes.git
-cd motivational-quotes
-```
+## Scheduled Automation (GitLab CI/CD)
+Create two scheduled pipelines under **CI/CD → Schedules** that run small `curl` jobs against the deployed API. Both must include the shared `CRON_SECRET` value.
 
-### 2. Install Dependencies
+| Purpose | Endpoint | Headers | Recommended cron |
+| --- | --- | --- | --- |
+| Refresh expiring Threads tokens | `POST https://<tu-dominio>/api/threads/refresh-tokens` | `Authorization: Bearer $CRON_SECRET` | `0 3 * * *` |
+| Publish queued posts | `POST https://<tu-dominio>/api/check-scheduled-posts` | `x-cron-secret: $CRON_SECRET` | `* * * * *` |
 
-```bash
-pnpm install
-```
+Both endpoints return 401 unless the secret matches, so keep the header values in sync with `CRON_SECRET`.
 
-### 3. Configure Environment Variables
+## Useful Scripts
+- `pnpm dev` – start the dev server with Turbopack.
+- `pnpm build` – create a production build.
+- `pnpm start` – serve the production build.
+- `pnpm lint` – run ESLint & Prettier.
+- `pnpm test` – execute the Jest suite.
 
-Create a `.env.local` file in the project root and add the following variables.
+## Directory Highlights
+- `app/` – App Router routes, API handlers, server actions.
+- `app/components/` – dashboard UI, authentication flows, reusable primitives.
+- `app/lib/` – Gemini client, database models/actions, Threads API helpers.
+- `tests/` – integration tests for API routes.
 
-| Variable | Description |
-| :--- | :--- |
-| `GEMINI_API_KEY` | Your API key for Google Gemini. |
-| `MONGO_URI` | Connection URI for your MongoDB database. |
-| `CLIENT_SECRET` | The ''''App Secret'''' from your Threads application. |
-| `CRON_SECRET` | A strong, random secret to protect automated task endpoints. |
-| `NEXT_PUBLIC_CLIENT_ID` | The ''''App ID'''' from your Threads application. |
-| `NEXT_PUBLIC_BASE_URL`| The base URL of your application (e.g., `http://localhost:3000`). |
-| `NEXT_PUBLIC_API_STATE` | A random string to prevent CSRF attacks in the OAuth flow. |
-| `NEXT_PUBLIC_SUPPORT_EMAIL` | Public email for support and data deletion requests. |
-
-### 4. Run the Application
-
-```bash
-pnpm dev
-```
-
-The application will be available at [http://localhost:3000](http://localhost:3000).
-
-### 5. Run Tests
-
-```bash
-pnpm test
-```
-
----
-
-## ⚙️ Automated Tasks (GitHub Actions)
-
-This project relies on GitHub Actions for all automated and scheduled tasks. The workflow configurations are defined in the `.github/workflows/` directory.
-
-- **Token Refresh**: A workflow runs daily to refresh expiring Threads API tokens, ensuring user sessions remain active.
-  - **Workflow**: `refresh-tokens.yml`
-  - **Schedule**: Runs once a day (`0 3 * * *`).
-
-- **Scheduled Post Publishing**: A workflow runs every 5 minutes to check for and publish any posts that users have scheduled.
-  - **Workflow**: `check-posts.yml`
-  - **Schedule**: Runs every 5 minutes (`*/5 * * * *`).
-
-To protect the API endpoints called by these workflows, ensure the `CRON_SECRET` environment variable is configured as a repository secret in your GitHub project settings.
-
----
-
-## 🚀 Getting Started
-
-Follow these steps to set up and run the project in your local environment.
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) (version 20.x)
-- [pnpm](https://pnpm.io/)
-- A [MongoDB](https://www.mongodb.com/) instance (local or cloud)
-- A configured Threads App for OAuth credentials.
-
-### 1. Clone the Repository
-
-```bash
-git clone https://github.com/jjvillarreal/motivational-quotes.git
-cd motivational-quotes
-```
-
-### 2. Install Dependencies
-
-```bash
-pnpm install
-```
-
-### 3. Configure Environment Variables
-
-Create a `.env.local` file in the project root and add the following variables.
-
-| Variable | Description |
-| :--- | :--- |
-| `GEMINI_API_KEY` | Your API key for Google Gemini. |
-| `MONGO_URI` | Connection URI for your MongoDB database. |
-| `CLIENT_SECRET` | The '''App Secret''' from your Threads application. |
-| `CRON_SECRET` | A strong, random secret to protect automated task endpoints. |
-| `NEXT_PUBLIC_CLIENT_ID` | The '''App ID''' from your Threads application. |
-| `NEXT_PUBLIC_BASE_URL`| The base URL of your application (e.g., `http://localhost:3000`). |
-| `NEXT_PUBLIC_API_STATE` | A random string to prevent CSRF attacks in the OAuth flow. |
-| `NEXT_PUBLIC_SUPPORT_EMAIL` | Public email for support and data deletion requests. |
-
-### 4. Run the Application
-
-```bash
-pnpm dev
-```
-
-The application will be available at [http://localhost:3000](http://localhost:3000).
-
-### 5. Run Tests
-
-```bash
-pnpm test
-```
-
----
-
-## ⚙️ Automated Tasks (Vercel Cron Jobs)
-
-This project relies on Vercel Cron Jobs to handle all automated and scheduled tasks, ensuring the application runs autonomously. The configuration is defined in the `vercel.json` file.
-
-- **Token Refresh**: A cron job runs daily to refresh expiring Threads API tokens, ensuring user sessions remain active.
-  - **Endpoint**: `POST /api/threads/refresh-tokens`
-  - **Schedule**: Runs once a day (`0 3 * * *`).
-
-- **Scheduled Post Publishing**: A cron job runs every minute to check for and publish any posts that users have scheduled.
-  - **Endpoint**: `POST /api/check-scheduled-posts`
-  - **Schedule**: Runs every minute (`* * * * *`).
-
-To protect these endpoints, ensure the `CRON_SECRET` environment variable is configured correctly in your Vercel project settings.
+With Threads credentials, MongoDB connectivity, and GitLab schedules in place, the application can continuously generate Gemini copy and publish it to Threads without manual intervention.
