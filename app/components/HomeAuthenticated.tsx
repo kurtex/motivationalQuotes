@@ -13,11 +13,9 @@ import { Header } from "./dashboard/Header";
 
 
 export default function SchedulerDashboard () {
-  const [newPrompt, setNewPrompt] = useState("");
   const [scheduleType, setScheduleType] = useState("daily");
   const [scheduleTime, setScheduleTime] = useState("11:35");
   const [activePrompt, setActivePrompt] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const [scheduledPost, setScheduledPost] = useState<any>(null); // TODO: Define a proper type for ScheduledPost
   const [isClearing, setIsClearing] = useState(false);
   const [isSavingConfig, setIsSavingConfig] = useState(false);
@@ -25,15 +23,14 @@ export default function SchedulerDashboard () {
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isExecuting, setIsExecuting] = useState(false);
 
-  const handleSubmitPrompt = async () => {
-    setIsLoading(true);
+  const handleSubmitPrompt = async (prompt: string) => {
     try {
       const response = await fetch("/api/gemini-generate", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: newPrompt }),
+        body: JSON.stringify({ prompt }),
       });
 
       if (!response.ok) {
@@ -42,13 +39,10 @@ export default function SchedulerDashboard () {
 
       const data = await response.json();
       setActivePrompt(data.promptText);
-      setNewPrompt(""); // Clear the textarea after successful submission
       alert("Prompt updated successfully!");
     } catch (error) {
       console.error("Failed to update prompt:", error);
       alert("Failed to update prompt. Please try again.");
-    } finally {
-      setIsLoading(false);
     }
   };
 

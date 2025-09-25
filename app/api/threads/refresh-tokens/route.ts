@@ -8,7 +8,7 @@ const ONE_DAY_IN_SECONDS = 86400;
 const BATCH_SIZE = 100; // Process 100 tokens at a time
 
 export async function POST(req: NextRequest) {
-	// Protection: require the Vercel CRON_SECRET (allow for case-insensitive header access)
+	// Protection: require the scheduled-job CRON_SECRET (allow for case-insensitive header access)
 	let authHeader =
 		req.headers.get("authorization") ??
 		req.headers.get("Authorization");
