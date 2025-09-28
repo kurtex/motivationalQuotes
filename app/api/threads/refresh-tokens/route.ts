@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/app/lib/database/db";
 import Token from "@/app/lib/database/models/Token";
 import { refreshLongLivedToken } from "@/app/lib/threads-api/auth-tokens/actions";
+import { getPlainThreadsToken } from "@/app/lib/database/actions";
+import { encryptSecret, hashToken } from "@/app/lib/utils/tokenSecurity";
 
 // 1 day in seconds
 const ONE_DAY_IN_SECONDS = 86400;
@@ -48,8 +50,13 @@ export async function POST(req: NextRequest) {
 			const remaining = expiresAt - now;
 			if (remaining < ONE_DAY_IN_SECONDS) {
 				try {
-					const response = await refreshLongLivedToken(token.access_token);
-					token.access_token = response.access_token;
+const currentToken = await getPlainThreadsToken(token);
+					const response = await refreshLongLivedToken(currentToken);
+					const encrypted = encryptSecret(response.access_token);
+					token.access_token_encrypted = encrypted.value;
+					token.access_token_iv = encrypted.iv;
+					token.access_token_tag = encrypted.tag;
+					token.token_hash = hashToken(response.access_token);
 					token.expires_in = response.expires_in;
 					token.last_updated = now;
 					await token.save();

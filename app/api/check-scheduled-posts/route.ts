@@ -9,7 +9,10 @@ import {
 	postThreadsTextContainer,
 } from "@/app/lib/threads-api/threads-posts/actions";
 import Token from "@/app/lib/database/models/Token";
-import { saveUniqueGeminiQuote } from "@/app/lib/database/actions"; // To generate quote from prompt
+import {
+	saveUniqueGeminiQuote,
+	getPlainThreadsToken,
+} from "@/app/lib/database/actions"; // To generate quote from prompt
 
 // Helper function to calculate the next scheduled occurrence
 function calculateNextOccurrence(
@@ -52,8 +55,20 @@ function calculateNextOccurrence(
 
 export async function POST(req: NextRequest) {
 	// Basic security: require a secret header for cron jobs
-	const secret = req.headers.get("x-cron-secret");
-	if (secret !== process.env.CRON_SECRET) {
+	let authHeader =
+		req.headers.get("authorization") ??
+		req.headers.get("Authorization");
+
+	if (!authHeader && typeof req.headers.entries === "function") {
+		for (const [key, value] of req.headers.entries()) {
+			if (key.toLowerCase() === "authorization") {
+				authHeader = value;
+				break;
+			}
+		}
+	}
+
+	if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
 		return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 	}
 
@@ -95,6 +110,8 @@ export async function POST(req: NextRequest) {
 					continue;
 				}
 
+const accessToken = await getPlainThreadsToken(userToken);
+
 				// 1. Generate quote from active prompt
 				const recentQuotes = await Quote.find({
 					user: user._id,
@@ -107,7 +124,7 @@ export async function POST(req: NextRequest) {
 				const quotesToAvoid = recentQuotes.map((q: any) => q.text);
 
 				const generatedQuote = await saveUniqueGeminiQuote(
-					userToken.access_token,
+					accessToken,
 					quotesToAvoid, // Pass quotes to avoid for recurring posts
 					5, // Max retries
 					(user.active_prompt as any).text // Use the text from the populated active_prompt
@@ -116,13 +133,10 @@ export async function POST(req: NextRequest) {
 				// 2. Post to Threads
 				const threadsContainerId = await createThreadTextContainer(
 					generatedQuote,
-					userToken.access_token
+					accessToken
 				);
 				await new Promise((resolve) => setTimeout(resolve, 3000)); // Respect the 3-second delay
-				await postThreadsTextContainer(
-					threadsContainerId,
-					userToken.access_token
-				);
+				await postThreadsTextContainer(threadsContainerId, accessToken);
 
 				// 3. Update schedule for next occurrence
 				post.lastPostedAt = now;

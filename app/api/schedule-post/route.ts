@@ -4,8 +4,8 @@ import ScheduledPost, {
 	IScheduledPost,
 } from "@/app/lib/database/models/ScheduledPost"; // Import IScheduledPost
 import { getCookie } from "@/app/lib/utils/cookies/actions";
-import Token from "@/app/lib/database/models/Token";
 import User from "@/app/lib/database/models/User";
+import { getMetaUserIdByThreadsAccessToken } from "@/app/lib/database/actions";
 
 // Helper function to calculate the next scheduled time
 function calculateNextScheduledAt(
@@ -96,15 +96,17 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Find the user associated with the threads token
-		const tokenDoc = await Token.findOne({ access_token: threadsToken });
-		if (!tokenDoc) {
+		let metaUserId: string;
+		try {
+			metaUserId = await getMetaUserIdByThreadsAccessToken(threadsToken);
+		} catch (err) {
 			return NextResponse.json(
 				{ error: "Unauthorized: Invalid Threads token" },
 				{ status: 401 }
 			);
 		}
 
-		const user = await User.findOne({ meta_user_id: tokenDoc.user_id });
+		const user = await User.findOne({ meta_user_id: metaUserId });
 		if (!user) {
 			return NextResponse.json({ error: "User not found" }, { status: 404 });
 		}

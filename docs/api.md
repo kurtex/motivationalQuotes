@@ -7,7 +7,7 @@
 - **Method**: POST
 - **Description**: Processes scheduled posts that are due.
 - **Headers**:
-  - `x-cron-secret`: Secret key for authentication.
+  - `Authorization: Bearer <CRON_SECRET>`
 - **Response**:
   - `200`: Successfully processed posts.
   - `401`: Unauthorized.

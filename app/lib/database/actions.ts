@@ -9,6 +9,11 @@ import Prompt from "./models/Prompt";
 import { GeminiClient } from "../ai/geminiClient";
 import { GeminiModel } from "../ai/geminiModels";
 import ScheduledPost, { IScheduledPost } from "./models/ScheduledPost"; // Added import
+import {
+	encryptSecret,
+	decryptSecret,
+	hashToken,
+} from "../utils/tokenSecurity";
 
 /**
  * Saves a Threads token to the database.
@@ -43,11 +48,15 @@ export async function updateThreadsToken(
 ): Promise<IToken> {
 	await connectToDB();
 	const now = Math.floor(Date.now() / 1000);
+	const encrypted = encryptSecret(accessToken);
 
 	const token: IToken | null = await Token.findOneAndUpdate(
 		{ user_id: metaUserId },
 		{
-			access_token: accessToken,
+			access_token_encrypted: encrypted.value,
+			access_token_iv: encrypted.iv,
+			access_token_tag: encrypted.tag,
+			token_hash: hashToken(accessToken),
 			last_updated: now,
 			expires_in: expiresIn,
 		},
@@ -73,9 +82,13 @@ async function saveToken(
 	now: number,
 	expiresIn: number
 ): Promise<IToken> {
+	const encrypted = encryptSecret(accessToken);
 	const token = await Token.create({
 		user_id: metaUserId,
-		access_token: accessToken,
+		access_token_encrypted: encrypted.value,
+		access_token_iv: encrypted.iv,
+		access_token_tag: encrypted.tag,
+		token_hash: hashToken(accessToken),
 		last_updated: now,
 		expires_in: expiresIn,
 	}).catch((err) => {
@@ -155,9 +168,10 @@ export async function getMetaUserIdByThreadsAccessToken(
 	accessToken: string
 ): Promise<string> {
 	await connectToDB();
+	const tokenHash = hashToken(accessToken);
 
 	const token: IToken | null = await Token.findOne({
-		access_token: accessToken,
+		token_hash: tokenHash,
 	});
 
 	if (!token) {
@@ -165,6 +179,14 @@ export async function getMetaUserIdByThreadsAccessToken(
 	}
 
 	return token.user_id;
+}
+
+export async function getPlainThreadsToken(tokenDoc: IToken): Promise<string> {
+	return decryptSecret({
+		value: tokenDoc.access_token_encrypted,
+		iv: tokenDoc.access_token_iv,
+		tag: tokenDoc.access_token_tag,
+	});
 }
 
 /**
@@ -323,7 +345,7 @@ export async function getActivePrompt(
 export async function getTokenExpiration(
 	threadsAccessToken: string
 ): Promise<number | null> {
-	const token = await Token.findOne({ access_token: threadsAccessToken });
+	const token = await Token.findOne({ token_hash: hashToken(threadsAccessToken) });
 	if (!token) return null;
 
 	return token.last_updated + token.expires_in;
