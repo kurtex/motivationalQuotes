@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDB } from '@/app/lib/database/db';
 import Token from '@/app/lib/database/models/Token';
 import { refreshLongLivedToken } from '@/app/lib/threads-api/auth-tokens/actions';
+import { getPlainThreadsToken } from '@/app/lib/database/actions';
+import { encryptSecret } from '@/app/lib/utils/tokenSecurity';
 
 // Mock external dependencies
 jest.mock('next/server', () => ({
@@ -16,10 +18,19 @@ jest.mock('next/server', () => ({
 jest.mock('@/app/lib/database/db');
 jest.mock('@/app/lib/database/models/Token');
 jest.mock('@/app/lib/threads-api/auth-tokens/actions');
+jest.mock('@/app/lib/database/actions', () => ({
+    getPlainThreadsToken: jest.fn((token: any) => token.__plain),
+}));
+jest.mock('@/app/lib/utils/tokenSecurity', () => ({
+    encryptSecret: jest.fn(() => ({ value: 'enc', iv: 'iv', tag: 'tag' })),
+    hashToken: jest.fn(() => 'hash'),
+}));
 
 const mockedConnectToDB = connectToDB as jest.Mock;
 const mockedTokenFind = Token.find as jest.Mock;
 const mockedRefreshLongLivedToken = refreshLongLivedToken as jest.Mock;
+const mockedGetPlainToken = getPlainThreadsToken as jest.Mock;
+const mockedEncryptSecret = encryptSecret as jest.Mock;
 
 describe('POST /api/threads/refresh-tokens', () => {
     let mockRequest: Partial<NextRequest>;
@@ -85,14 +96,14 @@ describe('POST /api/threads/refresh-tokens', () => {
         const now = Math.floor(Date.now() / 1000);
         const expiringToken = {
             user_id: 'user1',
-            access_token: 'old-token-1',
+            __plain: 'old-token-1',
             last_updated: now - (86400 * 60) + 86399, // Expires in slightly less than 1 day
             expires_in: 86400 * 60,
             save: jest.fn().mockResolvedValue(true),
         };
         const nonExpiringToken = {
             user_id: 'user2',
-            access_token: 'old-token-2',
+            __plain: 'old-token-2',
             last_updated: now - (86400 * 50), // Expires in 10 days
             expires_in: 86400 * 60,
             save: jest.fn().mockResolvedValue(true),
@@ -111,9 +122,10 @@ describe('POST /api/threads/refresh-tokens', () => {
 
         expect(mockedConnectToDB).toHaveBeenCalled();
         expect(mockedRefreshLongLivedToken).toHaveBeenCalledTimes(1);
+        expect(mockedGetPlainToken).toHaveBeenCalledWith(expiringToken);
         expect(mockedRefreshLongLivedToken).toHaveBeenCalledWith('old-token-1');
         expect(expiringToken.save).toHaveBeenCalledTimes(1);
-        expect(expiringToken.access_token).toBe('new-access-token');
+        expect(mockedEncryptSecret).toHaveBeenCalledWith('new-access-token');
         expect(expiringToken.expires_in).toBe(5184000);
         expect(nonExpiringToken.save).not.toHaveBeenCalled();
         expect(jsonResponse).toEqual({ refreshed: 1, errors: [] });
@@ -123,7 +135,7 @@ describe('POST /api/threads/refresh-tokens', () => {
         const now = Math.floor(Date.now() / 1000);
         const expiringTokenWithError = {
             user_id: 'user3',
-            access_token: 'old-token-3',
+            __plain: 'old-token-3',
             last_updated: now - (86400 * 60) + 86399, // Expires in slightly less than 1 day
             expires_in: 86400 * 60,
             save: jest.fn().mockResolvedValue(true),
@@ -142,6 +154,7 @@ describe('POST /api/threads/refresh-tokens', () => {
         const response = await POST(mockRequest as NextRequest);
         const jsonResponse = await response.json();
 
+        expect(mockedGetPlainToken).toHaveBeenCalledWith(expiringTokenWithError);
         expect(mockedRefreshLongLivedToken).toHaveBeenCalledWith('old-token-3');
         expect(expiringTokenWithError.save).not.toHaveBeenCalled();
         expect(jsonResponse.refreshed).toBe(0);

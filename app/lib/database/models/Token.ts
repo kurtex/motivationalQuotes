@@ -8,8 +8,14 @@ import mongoose, { Schema, Document } from "mongoose";
 export interface IToken extends Document {
 	/** The unique identifier of the user this token belongs to */
 	user_id: string;
-	/** The actual access token string used for API authentication */
-	access_token: string;
+	/** AES-GCM encrypted Threads access token */
+	access_token_encrypted: string;
+	/** Initialization vector used during encryption */
+	access_token_iv: string;
+	/** Authentication tag produced by AES-GCM */
+	access_token_tag: string;
+	/** Deterministic hash of the plaintext token for lookup */
+	token_hash: string;
 	/** Unix timestamp (in seconds) of the last token update or refresh */
 	last_updated: number;
 	/** Token expiration time in seconds from last_updated */
@@ -22,7 +28,10 @@ export interface IToken extends Document {
  */
 const TokenSchema: Schema = new Schema({
 	user_id: { type: String, required: true, unique: true },
-	access_token: { type: String, required: true, index: true }, // Add index to access_token
+	access_token_encrypted: { type: String, required: true },
+	access_token_iv: { type: String, required: true },
+	access_token_tag: { type: String, required: true },
+	token_hash: { type: String, required: true, unique: true },
 	last_updated: { type: Number, required: true },
 	expires_in: { type: Number, required: true },
 });

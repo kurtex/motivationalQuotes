@@ -79,6 +79,7 @@ jest.mock("@/app/lib/database/models/Quote", () => {
 
 jest.mock("@/app/lib/database/actions", () => ({
 	saveUniqueGeminiQuote: jest.fn(),
+	getPlainThreadsToken: jest.fn(() => "token1"),
 }));
 
 jest.mock("@/app/lib/threads-api/threads-posts/actions", () => ({
@@ -134,7 +135,7 @@ describe("POST /api/check-scheduled-posts", () => {
 	const mockRequest = (headers: Record<string, string>): NextRequest =>
 		({
 			headers: {
-				get: (key: string) => headers[key],
+				get: (key: string) => headers[key] ?? headers[key.toLowerCase()],
 			},
 			cookies: {},
 			nextUrl: new URL("http://localhost"),
@@ -167,9 +168,7 @@ describe("POST /api/check-scheduled-posts", () => {
 			},
 		]);
 
-		(Token.findOne as jest.Mock).mockResolvedValueOnce({
-			access_token: "token1",
-		});
+		(Token.findOne as jest.Mock).mockResolvedValueOnce({});
 
 		(saveUniqueGeminiQuote as jest.Mock).mockResolvedValueOnce(
 			"Generated Quote"
@@ -180,7 +179,7 @@ describe("POST /api/check-scheduled-posts", () => {
 		);
 		(postThreadsTextContainer as jest.Mock).mockResolvedValueOnce(true);
 
-		const req = mockRequest({ "x-cron-secret": "valid-secret" });
+		const req = mockRequest({ Authorization: "Bearer valid-secret" });
 		const res = await POST(req);
 		const body = await res.json();
 

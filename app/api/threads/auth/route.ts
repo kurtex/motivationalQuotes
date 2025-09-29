@@ -99,11 +99,11 @@ export async function POST(request: Request) {
 		// Note: The cookie is set to expire after 60 days.
 		response.headers.append(
 			"Set-Cookie",
-			`threads-token=${
-				token!.access_token
-			}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${
-				token!.expires_in
-			};`
+				`threads-token=${
+					longLivedToken.access_token
+				}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${
+					token!.expires_in
+				};`
 		);
 
 		return response;

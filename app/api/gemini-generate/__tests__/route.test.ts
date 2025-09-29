@@ -52,6 +52,29 @@ describe('POST /api/gemini-generate', () => {
         expect(jsonResponse).toEqual({ error: 'Unauthorized' });
     });
 
+    it('should return 400 if prompt is empty', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: '   ' });
+
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse).toEqual({ error: 'Prompt is required' });
+        expect(mockedSavePrompt).not.toHaveBeenCalled();
+    });
+
+    it('should return 400 if prompt exceeds max length', async () => {
+        const longPrompt = 'a'.repeat(1001);
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: longPrompt });
+
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse).toEqual({ error: 'Prompt is too long' });
+        expect(mockedSavePrompt).not.toHaveBeenCalled();
+    });
+
     it('should return 500 if saving the prompt fails', async () => {
         const mockPrompt = "A new prompt";
         mockRequest.json = jest.fn().mockResolvedValue({ prompt: mockPrompt });
