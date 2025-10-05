@@ -19,15 +19,17 @@ import { Button } from "@/app/components/ui/button";
 interface ConfigCardProps {
   scheduleType: string;
   scheduleTime: string;
+  timeZoneId: string;
   onScheduleTypeChange: (value: string) => void;
   onScheduleTimeChange: (value: string) => void;
   onSaveConfig: () => Promise<void>;
   isSavingConfig: boolean;
 }
 
-export function ConfigCard({
+export function ConfigCard ({
   scheduleType,
   scheduleTime,
+  timeZoneId,
   onScheduleTypeChange,
   onScheduleTimeChange,
   onSaveConfig,

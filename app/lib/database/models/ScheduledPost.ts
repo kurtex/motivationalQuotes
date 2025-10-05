@@ -6,6 +6,7 @@ export interface IScheduledPost extends Document {
     intervalValue?: number; // e.g., 2 for every 2 days (if custom)
     intervalUnit?: 'hours' | 'days' | 'weeks'; // e.g., 'days' (if custom)
     timeOfDay: string; // HH:MM format for daily/weekly/custom posts
+    timeZoneId: string; // IANA timezone identifier
     lastPostedAt?: Date; // Timestamp of the last successful post
     nextScheduledAt: Date; // Calculated next time this post should occur
     status: 'active' | 'paused' | 'error'; // Status of the recurring schedule
@@ -19,6 +20,7 @@ const ScheduledPostSchema: Schema = new Schema({
     intervalValue: { type: Number },
     intervalUnit: { type: String, enum: ['hours', 'days', 'weeks'] },
     timeOfDay: { type: String, required: true }, // Stored as "HH:MM"
+    timeZoneId: { type: String, required: true, default: 'UTC' },
     lastPostedAt: { type: Date },
     nextScheduledAt: { type: Date, required: true, index: true }, // Index for efficient querying
     status: { type: String, enum: ['active', 'paused', 'error'], default: 'active' },

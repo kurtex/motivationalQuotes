@@ -1,7 +1,7 @@
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
 import { Bot, LogOut } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/app/lib/utils/utils";
 
 /**
  * Header Component
@@ -17,7 +17,7 @@ interface HeaderProps {
   isAutomated: boolean;
 }
 
-export function Header({ onLogout, isAutomated }: HeaderProps) {
+export function Header ({ onLogout, isAutomated }: HeaderProps) {
   return (
     <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-sm rounded-lg p-3 border border-slate-600/30">
       <div className="flex items-center gap-3">
@@ -25,11 +25,11 @@ export function Header({ onLogout, isAutomated }: HeaderProps) {
           <Bot className="w-4 h-4" />
           xjujovi
         </div>
-        <Badge 
-          variant="secondary" 
+        <Badge
+          variant="secondary"
           className={cn(
             "text-xs",
-            isAutomated 
+            isAutomated
               ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
               : "bg-slate-500/15 text-slate-300 border-slate-500/25"
           )}
@@ -42,9 +42,9 @@ export function Header({ onLogout, isAutomated }: HeaderProps) {
         </Badge>
       </div>
       <div className="flex items-center gap-1">
-        <Button 
-          variant="ghost" 
-          size="sm" 
+        <Button
+          variant="ghost"
+          size="sm"
           className="text-slate-400 hover:text-slate-300 h-8 px-2"
           onClick={onLogout}
         >

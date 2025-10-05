@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/app/lib/database/db";
-import ScheduledPost, {
-	IScheduledPost,
-} from "@/app/lib/database/models/ScheduledPost";
+import ScheduledPost from "@/app/lib/database/models/ScheduledPost";
 import Quote from "@/app/lib/database/models/Quote"; // Import Quote model
 import {
 	createThreadTextContainer,
@@ -13,51 +11,12 @@ import {
 	saveUniqueGeminiQuote,
 	getPlainThreadsToken,
 } from "@/app/lib/database/actions"; // To generate quote from prompt
-
-// Helper function to calculate the next scheduled occurrence
-function calculateNextOccurrence(
-	lastPostedAt: Date,
-	scheduleType: IScheduledPost["scheduleType"],
-	timeOfDay: string, // HH:MM
-	intervalValue?: number,
-	intervalUnit?: IScheduledPost["intervalUnit"]
-): Date {
-	const [hours, minutes] = timeOfDay.split(":").map(Number);
-	let nextOccurrence = new Date(lastPostedAt);
-	nextOccurrence.setSeconds(0);
-	nextOccurrence.setMilliseconds(0);
-
-	// Set the time of day for the next occurrence
-	nextOccurrence.setHours(hours);
-	nextOccurrence.setMinutes(minutes);
-
-	// If setting the time of day makes it earlier than lastPostedAt, move to next day
-	if (nextOccurrence.getTime() <= lastPostedAt.getTime()) {
-		nextOccurrence.setDate(nextOccurrence.getDate() + 1);
-	}
-
-	if (scheduleType === "custom" && intervalValue && intervalUnit) {
-		// Adjust for custom intervals
-		while (nextOccurrence.getTime() <= lastPostedAt.getTime()) {
-			if (intervalUnit === "hours") {
-				nextOccurrence.setHours(nextOccurrence.getHours() + intervalValue);
-			} else if (intervalUnit === "days") {
-				nextOccurrence.setDate(nextOccurrence.getDate() + intervalValue);
-			} else if (intervalUnit === "weeks") {
-				nextOccurrence.setDate(nextOccurrence.getDate() + intervalValue * 7);
-			}
-		}
-	}
-	// For 'daily' and 'weekly', the initial 'nextOccurrence' calculation (today/tomorrow at timeOfDay) is sufficient.
-
-	return nextOccurrence;
-}
+import { calculateNextScheduledAt } from "@/app/lib/utils/schedule/calculateNextScheduledAt";
 
 export async function POST(req: NextRequest) {
 	// Basic security: require a secret header for cron jobs
 	let authHeader =
-		req.headers.get("authorization") ??
-		req.headers.get("Authorization");
+		req.headers.get("authorization") ?? req.headers.get("Authorization");
 
 	if (!authHeader && typeof req.headers.entries === "function") {
 		for (const [key, value] of req.headers.entries()) {
@@ -79,12 +38,19 @@ export async function POST(req: NextRequest) {
 
 	try {
 		// Find active schedules that are due now or in the past
-		const duePosts = await ScheduledPost.find({
-			nextScheduledAt: { $lte: now },
-			status: "active",
-		})
-			.populate("userId", "_id active_prompt")
-			.select("_id userId nextScheduledAt status")
+			const duePosts = await ScheduledPost.find({
+				nextScheduledAt: { $lte: now },
+				status: "active",
+			})
+				.populate({
+					path: "userId",
+					select: "_id active_prompt meta_user_id",
+					populate: {
+						path: "active_prompt",
+						select: "text",
+					},
+				})
+				.select("_id userId nextScheduledAt status scheduleType timeOfDay intervalValue intervalUnit timeZoneId")
 			.limit(100) // Limit the number of posts processed in one batch
 			.exec();
 
@@ -110,7 +76,7 @@ export async function POST(req: NextRequest) {
 					continue;
 				}
 
-const accessToken = await getPlainThreadsToken(userToken);
+				const accessToken = await getPlainThreadsToken(userToken);
 
 				// 1. Generate quote from active prompt
 				const recentQuotes = await Quote.find({
@@ -138,14 +104,15 @@ const accessToken = await getPlainThreadsToken(userToken);
 				await new Promise((resolve) => setTimeout(resolve, 3000)); // Respect the 3-second delay
 				await postThreadsTextContainer(threadsContainerId, accessToken);
 
-				// 3. Update schedule for next occurrence
+				// 3. Update schedule for next occurrence using stored timezone
 				post.lastPostedAt = now;
-				post.nextScheduledAt = calculateNextOccurrence(
-					now, // Use current time as lastPostedAt for next calculation
+				post.nextScheduledAt = calculateNextScheduledAt(
 					post.scheduleType,
 					post.timeOfDay,
+					post.timeZoneId ?? "UTC",
 					post.intervalValue,
-					post.intervalUnit
+					post.intervalUnit,
+					now
 				);
 				post.status = "active"; // Ensure status is active after successful post
 				await post.save();
