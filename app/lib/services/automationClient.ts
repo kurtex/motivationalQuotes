@@ -1,3 +1,5 @@
+import type { SerializedScheduledPost } from "../types/schedule";
+
 export async function updateAutomationPrompt(prompt: string) {
   const response = await fetch("/api/gemini-generate", {
     method: "POST",
@@ -28,7 +30,7 @@ export async function getScheduledPost() {
   if (!response.ok) {
     throw new Error(`Error: ${response.statusText}`);
   }
-  return response.json() as Promise<{ scheduledPost: any }>; // TODO: refine type
+  return response.json() as Promise<{ scheduledPost?: SerializedScheduledPost }>;
 }
 
 export async function clearSchedule() {
@@ -40,11 +42,26 @@ export async function clearSchedule() {
   }
 }
 
+export async function reactivateSchedule() {
+  const response = await fetch("/api/reactivate-schedule", {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.error || response.statusText || "Failed to reactivate schedule";
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ nextScheduledAt: string }>;
+}
+
 interface SaveSchedulePayload {
   scheduleType: string;
   timeOfDay: string;
   intervalValue?: number;
   intervalUnit?: string;
+  timeZoneId: string;
 }
 
 export async function saveScheduleConfig(payload: SaveSchedulePayload) {

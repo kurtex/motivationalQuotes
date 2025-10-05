@@ -50,6 +50,8 @@
   - `intervalValue`: Interval value for custom schedules.
   - `intervalUnit`: Interval unit for custom schedules (`hours`, `days`, `weeks`).
   - `timeOfDay`: Time of day for the schedule (`HH:MM`).
+  - `timeZoneId`: IANA timezone identifier.
+  - `timeZoneId`: IANA timezone identifier (e.g., `Europe/Madrid`).
 - **Response**:
   - `200`: Schedule updated successfully.
   - `400`: Invalid input.

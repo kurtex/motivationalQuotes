@@ -1,6 +1,6 @@
 import { Card, CardContent } from "@/app/components/ui/card";
 import { Bot } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/app/lib/utils/utils";
 
 /**
  * StatusCard Component
@@ -14,7 +14,7 @@ interface StatusCardProps {
   isOnline: boolean;
 }
 
-export function StatusCard({ isOnline }: StatusCardProps) {
+export function StatusCard ({ isOnline }: StatusCardProps) {
   return (
     <Card className={cn(
       "bg-slate-900/40 backdrop-blur-sm",

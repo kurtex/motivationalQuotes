@@ -9,6 +9,7 @@ import Prompt from "./models/Prompt";
 import { GeminiClient } from "../ai/geminiClient";
 import { GeminiModel } from "../ai/geminiModels";
 import ScheduledPost, { IScheduledPost } from "./models/ScheduledPost"; // Added import
+import type { SerializedScheduledPost } from "../types/schedule";
 import {
 	encryptSecret,
 	decryptSecret,
@@ -358,7 +359,7 @@ export async function getTokenExpiration(
  */
 export async function getScheduledPostForUser(
 	threadsAccessToken: string
-): Promise<IScheduledPost | null> {
+): Promise<SerializedScheduledPost | null> {
 	await connectToDB();
 
 	const metaUserId = await getMetaUserIdByThreadsAccessToken(
@@ -372,18 +373,21 @@ export async function getScheduledPostForUser(
 	const scheduledPost = await ScheduledPost.findOne({ userId: user._id });
 
 	if (scheduledPost) {
-		// Manually convert _id to string and Date objects to ISO strings
-		const plainScheduledPost: IScheduledPost = {
-			...scheduledPost.toObject(),
-			_id: scheduledPost._id.toString(), // Convert ObjectId to string
-			userId: scheduledPost.userId.toString(), // Convert ObjectId to string
-			createdAt: scheduledPost.createdAt.toISOString(), // Convert Date to ISO string
-			updatedAt: scheduledPost.updatedAt.toISOString(), // Convert Date to ISO string
-			nextScheduledAt: scheduledPost.nextScheduledAt.toISOString(), // Convert Date to ISO string
-			// lastPostedAt might be null, so check before converting
-			lastPostedAt: scheduledPost.lastPostedAt
-				? scheduledPost.lastPostedAt.toISOString()
-				: undefined,
+		const plainScheduledPost: SerializedScheduledPost = {
+			_id: scheduledPost._id.toString(),
+			userId: scheduledPost.userId.toString(),
+				scheduleType: scheduledPost.scheduleType,
+				intervalValue: scheduledPost.intervalValue,
+				intervalUnit: scheduledPost.intervalUnit,
+				timeOfDay: scheduledPost.timeOfDay,
+				timeZoneId: scheduledPost.timeZoneId ?? "UTC",
+				lastPostedAt: scheduledPost.lastPostedAt
+					? scheduledPost.lastPostedAt.toISOString()
+					: undefined,
+			nextScheduledAt: scheduledPost.nextScheduledAt.toISOString(),
+			status: scheduledPost.status,
+			createdAt: scheduledPost.createdAt.toISOString(),
+			updatedAt: scheduledPost.updatedAt.toISOString(),
 		};
 		return plainScheduledPost;
 	}

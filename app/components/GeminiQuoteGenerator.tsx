@@ -19,6 +19,7 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
     const [intervalValue, setIntervalValue] = useState<number | undefined>(undefined);
     const [intervalUnit, setIntervalUnit] = useState<IScheduledPost['intervalUnit']>(undefined);
     const [timeOfDay, setTimeOfDay] = useState<string>('09:00'); // Default to 9 AM
+    const [timeZoneId, setTimeZoneId] = useState<string>('UTC');
 
     // Set default timeOfDay to a reasonable value (e.g., current hour + 1, or 09:00)
     useEffect(() => {
@@ -26,6 +27,8 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
         const hours = (now.getHours() + 1).toString().padStart(2, '0');
         const minutes = now.getMinutes().toString().padStart(2, '0');
         setTimeOfDay(`${hours}:${minutes}`);
+        const resolvedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? 'UTC';
+        setTimeZoneId(resolvedTimeZone);
     }, []);
 
     const handlePreview = async () => {
@@ -113,6 +116,7 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
                     intervalValue: scheduleType === 'custom' ? intervalValue : undefined,
                     intervalUnit: scheduleType === 'custom' ? intervalUnit : undefined,
                     timeOfDay,
+                    timeZoneId,
                 }),
             });
             const data = await res.json();
