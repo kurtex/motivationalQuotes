@@ -29,7 +29,10 @@ function getFormatter(timeZone: string) {
 	return DATE_TIME_FORMATTER_CACHE.get(timeZone)!;
 }
 
-export function getZonedDateTimeParts(date: Date, timeZone: string): ZonedDateTimeParts {
+export function getZonedDateTimeParts(
+	date: Date,
+	timeZone: string
+): ZonedDateTimeParts {
 	const formatter = getFormatter(timeZone);
 	const parts = formatter.formatToParts(date);
 	const lookup: Record<string, number> = {};
@@ -51,7 +54,16 @@ export function getZonedDateTimeParts(date: Date, timeZone: string): ZonedDateTi
 }
 
 function buildUTCDate(parts: ZonedDateTimeParts): Date {
-	return new Date(Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second));
+	return new Date(
+		Date.UTC(
+			parts.year,
+			parts.month - 1,
+			parts.day,
+			parts.hour,
+			parts.minute,
+			parts.second
+		)
+	);
 }
 
 function getTimeZoneOffset(date: Date, timeZone: string): number {
@@ -77,7 +89,10 @@ function getTimeZoneOffset(date: Date, timeZone: string): number {
 	return asUTC - date.getTime();
 }
 
-export function zonedTimeToUtc(parts: ZonedDateTimeParts, timeZone: string): Date {
+export function zonedTimeToUtc(
+	parts: ZonedDateTimeParts,
+	timeZone: string
+): Date {
 	const initial = buildUTCDate(parts);
 	const offset = getTimeZoneOffset(initial, timeZone);
 	let utcDate = new Date(initial.getTime() - offset);
@@ -91,6 +106,14 @@ export function zonedTimeToUtc(parts: ZonedDateTimeParts, timeZone: string): Dat
 	return utcDate;
 }
 
+/**
+ * Sets the time (hour and minute) on the local parts of a ZonedDateTimeParts object.
+ *
+ * @param {ZonedDateTimeParts} parts - The original ZonedDateTimeParts object.
+ * @param {number} hour - The hour to set (0-23).
+ * @param {number} minute - The minute to set (0-59).
+ * @returns {ZonedDateTimeParts} - A new ZonedDateTimeParts object with the updated time.
+ */
 export function setTimeOnLocalParts(
 	parts: ZonedDateTimeParts,
 	hour: number,
