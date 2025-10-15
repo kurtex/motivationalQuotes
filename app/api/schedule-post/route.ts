@@ -17,13 +17,18 @@ export async function POST(req: NextRequest) {
 
 		if (!scheduleType || !timeOfDay) {
 			return NextResponse.json(
-				{ error: `Schedule type or time of day missing. scheduleType: ${scheduleType}, timeOfDay: ${timeOfDay}` },
+				{
+					error: `Schedule type or time of day missing. scheduleType: ${scheduleType}, timeOfDay: ${timeOfDay}`,
+				},
 				{ status: 400 }
 			);
 		}
 		if (!timeZoneId || typeof timeZoneId !== "string") {
 			return NextResponse.json(
-				{ error: "Missing or invalid timeZoneId. Provide a valid IANA timezone identifier." },
+				{
+					error:
+						"Missing or invalid timeZoneId. Provide a valid IANA timezone identifier.",
+				},
 				{ status: 400 }
 			);
 		}
@@ -64,27 +69,27 @@ export async function POST(req: NextRequest) {
 		}
 
 		// Calculate the initial nextScheduledAt
-			const nextScheduledAt = calculateNextScheduledAt(
-				scheduleType,
-				timeOfDay,
-				timeZoneId,
-				intervalValue,
-				intervalUnit
-			);
+		const nextScheduledAt = calculateNextScheduledAt(
+			scheduleType,
+			timeOfDay,
+			timeZoneId,
+			intervalValue,
+			intervalUnit
+		);
 
 		// Find existing schedule for this user
 		let scheduledPost = await ScheduledPost.findOne({ userId: user._id });
 
 		if (scheduledPost) {
-				// Update existing schedule
-				scheduledPost.scheduleType = scheduleType;
-				scheduledPost.intervalValue = intervalValue;
-				scheduledPost.intervalUnit = intervalUnit;
-				scheduledPost.timeOfDay = timeOfDay;
-				scheduledPost.nextScheduledAt = nextScheduledAt;
-				scheduledPost.timeZoneId = timeZoneId;
-				scheduledPost.status = "active"; // Reactivate if it was paused/error
-				await scheduledPost.save();
+			// Update existing schedule
+			scheduledPost.scheduleType = scheduleType;
+			scheduledPost.intervalValue = intervalValue;
+			scheduledPost.intervalUnit = intervalUnit;
+			scheduledPost.timeOfDay = timeOfDay;
+			scheduledPost.nextScheduledAt = nextScheduledAt;
+			scheduledPost.timeZoneId = timeZoneId;
+			scheduledPost.status = "active"; // Reactivate if it was paused/error
+			await scheduledPost.save();
 		} else {
 			// Create new schedule
 			scheduledPost = new ScheduledPost({

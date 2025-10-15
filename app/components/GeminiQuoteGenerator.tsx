@@ -108,6 +108,7 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
         setPostError('');
 
         try {
+            const effectiveTimeZone = timeZoneId || Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
             const res = await fetch('/api/schedule-post', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -116,7 +117,7 @@ function GeminiQuoteGenerator ({ activePrompt }: GeminiQuoteGeneratorProps) {
                     intervalValue: scheduleType === 'custom' ? intervalValue : undefined,
                     intervalUnit: scheduleType === 'custom' ? intervalUnit : undefined,
                     timeOfDay,
-                    timeZoneId,
+                    timeZoneId: effectiveTimeZone,
                 }),
             });
             const data = await res.json();

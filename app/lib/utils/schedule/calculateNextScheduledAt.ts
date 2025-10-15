@@ -40,78 +40,67 @@ export function calculateNextScheduledAt(
 
 	let candidateUtc = zonedTimeToUtc(localCandidate, timeZoneId);
 
-	const ensureFutureCandidate = () => {
-		if (candidateUtc > now) {
-			return;
-		}
+	const MAX_ITERATIONS = 10_000; // Safety guard
+	let iterations = 0;
 
-		const advanceLocal = (updater: () => LocalDateTime) => {
-			localCandidate = updater();
-			candidateUtc = zonedTimeToUtc(localCandidate, timeZoneId);
-		};
-
+	const advanceLocalBySchedule = () => {
 		if (scheduleType === "daily") {
-			advanceLocal(() =>
-				setTimeOnLocalParts(
-					addDaysInTimeZone(localCandidate, timeZoneId, 1),
-					targetHour,
-					targetMinute
-				)
+			return setTimeOnLocalParts(
+				addDaysInTimeZone(localCandidate, timeZoneId, 1),
+				targetHour,
+				targetMinute
 			);
-			return ensureFutureCandidate();
 		}
 
 		if (scheduleType === "weekly") {
-			advanceLocal(() =>
-				setTimeOnLocalParts(
-					addDaysInTimeZone(localCandidate, timeZoneId, 7),
-					targetHour,
-					targetMinute
-				)
+			return setTimeOnLocalParts(
+				addDaysInTimeZone(localCandidate, timeZoneId, 7),
+				targetHour,
+				targetMinute
 			);
-			return ensureFutureCandidate();
 		}
 
 		if (scheduleType === "monthly") {
-			advanceLocal(() =>
-				setTimeOnLocalParts(
-					addMonthsInTimeZone(localCandidate, timeZoneId, 1),
-					targetHour,
-					targetMinute
-				)
+			return setTimeOnLocalParts(
+				addMonthsInTimeZone(localCandidate, timeZoneId, 1),
+				targetHour,
+				targetMinute
 			);
-			return ensureFutureCandidate();
 		}
 
 		if (scheduleType === "custom" && intervalValue && intervalUnit) {
 			if (intervalUnit === "hours") {
-				advanceLocal(() => addHoursInTimeZone(localCandidate, timeZoneId, intervalValue));
-			} else if (intervalUnit === "days") {
-				advanceLocal(() =>
-					setTimeOnLocalParts(
-						addDaysInTimeZone(localCandidate, timeZoneId, intervalValue),
-						targetHour,
-						targetMinute
-					)
-				);
-			} else if (intervalUnit === "weeks") {
-				advanceLocal(() =>
-					setTimeOnLocalParts(
-						addDaysInTimeZone(localCandidate, timeZoneId, intervalValue * 7),
-						targetHour,
-						targetMinute
-					)
+				return addHoursInTimeZone(localCandidate, timeZoneId, intervalValue);
+			}
+			if (intervalUnit === "days") {
+				return setTimeOnLocalParts(
+					addDaysInTimeZone(localCandidate, timeZoneId, intervalValue),
+					targetHour,
+					targetMinute
 				);
 			}
-			return ensureFutureCandidate();
+			if (intervalUnit === "weeks") {
+				return setTimeOnLocalParts(
+					addDaysInTimeZone(localCandidate, timeZoneId, intervalValue * 7),
+					targetHour,
+					targetMinute
+				);
+			}
 		}
 
-		// Default advance: add one minute to avoid infinite loop
-		advanceLocal(() => addHoursInTimeZone(localCandidate, timeZoneId, 1 / 60));
-		return ensureFutureCandidate();
+		// Default: advance by one day to avoid infinite loops
+		return setTimeOnLocalParts(
+			addDaysInTimeZone(localCandidate, timeZoneId, 1),
+			targetHour,
+			targetMinute
+		);
 	};
 
-	ensureFutureCandidate();
+	while (candidateUtc <= now && iterations < MAX_ITERATIONS) {
+		localCandidate = advanceLocalBySchedule();
+		candidateUtc = zonedTimeToUtc(localCandidate, timeZoneId);
+		iterations += 1;
+	}
 
 	return candidateUtc;
 }

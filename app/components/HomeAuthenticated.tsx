@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { SerializedScheduledPost } from "@/app/lib/types/schedule";
 
 // Importar componentes UI base
@@ -36,6 +36,7 @@ export default function SchedulerDashboard () {
 	const [isExecuting, setIsExecuting] = useState(false);
 	const [isReactivating, setIsReactivating] = useState(false);
 	const [timeZoneId, setTimeZoneId] = useState<string>("UTC");
+	const detectedTimeZoneRef = useRef<string>("UTC");
 
 	const handleSubmitPrompt = async (prompt: string) => {
 		try {
@@ -66,11 +67,18 @@ export default function SchedulerDashboard () {
 	const handleSaveConfig = async () => {
 		setIsSavingConfig(true);
 		try {
+			const fallbackZone = detectedTimeZoneRef.current || "UTC";
+			let effectiveTimeZone = timeZoneId || fallbackZone;
+
+			if (effectiveTimeZone === "UTC" && fallbackZone !== "UTC") {
+				effectiveTimeZone = fallbackZone;
+			}
 			await saveScheduleConfig({
 				scheduleType,
 				timeOfDay: scheduleTime,
-				timeZoneId,
+				timeZoneId: effectiveTimeZone,
 			});
+			setTimeZoneId(effectiveTimeZone);
 			await loadScheduledPost();
 			alert("Schedule saved successfully!");
 		} catch (error: any) {
@@ -165,10 +173,14 @@ export default function SchedulerDashboard () {
 		try {
 			const data = await fetchScheduledPostApi();
 			if (data.scheduledPost) {
-				setScheduledPost(data.scheduledPost);
-				if (data.scheduledPost.timeZoneId) {
-					setTimeZoneId(data.scheduledPost.timeZoneId);
+				const fallbackZone = detectedTimeZoneRef.current;
+				let normalizedTimeZone = data.scheduledPost.timeZoneId || fallbackZone;
+
+				if (normalizedTimeZone === "UTC" && fallbackZone !== "UTC") {
+					normalizedTimeZone = fallbackZone;
 				}
+				setScheduledPost({ ...data.scheduledPost, timeZoneId: normalizedTimeZone });
+				setTimeZoneId(normalizedTimeZone);
 				if (data.scheduledPost.timeOfDay) {
 					setScheduleTime(data.scheduledPost.timeOfDay);
 				}
@@ -194,6 +206,7 @@ export default function SchedulerDashboard () {
 		};
 
 		const resolvedTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? "UTC";
+		detectedTimeZoneRef.current = resolvedTimeZone;
 		setTimeZoneId(resolvedTimeZone);
 		fetchActivePrompt();
 		loadScheduledPost();
