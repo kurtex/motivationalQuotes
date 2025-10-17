@@ -4,9 +4,20 @@ import { getMetaUserIdByThreadsAccessToken } from "../../../lib/database/actions
 import User from "../../../lib/database/models/User";
 import Quote from "../../../lib/database/models/Quote";
 import { generateGeminiStream } from "../../../lib/ai/geminiClient"; // Changed import
+import { previewSchema } from "./schema";
 
 export async function POST(req: NextRequest) {
-    const { prompt } = await req.json();
+    const body = await req.json();
+    const validation = previewSchema.safeParse(body);
+
+    if (!validation.success) {
+        return NextResponse.json(
+            { error: "Invalid request data", issues: validation.error.flatten() },
+            { status: 400 }
+        );
+    }
+
+    const { prompt } = validation.data;
     const accessTokenCookie = await getThreadsCookie();
 
     if (!accessTokenCookie) {

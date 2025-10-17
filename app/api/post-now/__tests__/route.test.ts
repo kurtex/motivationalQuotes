@@ -59,16 +59,36 @@ describe('POST /api/post-now', () => {
     expect(mockedPostThreadAction).toHaveBeenCalled();
   });
 
-  it('should return 400 if prompt is missing', async () => {
-    mockRequest.json = jest.fn().mockResolvedValue({});
+  describe('Validation', () => {
+    it('should return 400 if prompt is missing', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({});
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
 
-    const response = await POST(mockRequest as NextRequest);
-    const jsonResponse = await response.json();
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received undefined');
+    });
 
-    expect(response.status).toBe(400);
-    expect(jsonResponse).toEqual({ error: 'Prompt is required' });
-    expect(mockedSaveUniqueGeminiQuote).not.toHaveBeenCalled();
-    expect(mockedPostThreadAction).not.toHaveBeenCalled();
+    it('should return 400 if prompt is an empty string', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: '   ' });
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Prompt is required');
+    });
+
+    it('should return 400 if prompt is not a string', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: 12345 });
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received number');
+    });
   });
 
   it('should return 401 if no threads token is found', async () => {

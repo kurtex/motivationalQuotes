@@ -1,48 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/app/lib/database/db";
-import ScheduledPost, {
-	IScheduledPost,
-} from "@/app/lib/database/models/ScheduledPost"; // Import IScheduledPost
+import ScheduledPost from "@/app/lib/database/models/ScheduledPost";
 import { getCookie } from "@/app/lib/utils/cookies/actions";
 import User from "@/app/lib/database/models/User";
 import { getMetaUserIdByThreadsAccessToken } from "@/app/lib/database/actions";
 import { calculateNextScheduledAt } from "@/app/lib/utils/schedule/calculateNextScheduledAt";
+import { schedulePostSchema } from "./schema";
 
 export async function POST(req: NextRequest) {
 	await connectToDB();
 
 	try {
-		const { scheduleType, intervalValue, intervalUnit, timeOfDay, timeZoneId } =
-			await req.json();
+		const body = await req.json();
+		const validation = schedulePostSchema.safeParse(body);
 
-		if (!scheduleType || !timeOfDay) {
+		if (!validation.success) {
 			return NextResponse.json(
-				{
-					error: `Schedule type or time of day missing. scheduleType: ${scheduleType}, timeOfDay: ${timeOfDay}`,
-				},
+				{ error: "Invalid request data", issues: validation.error.flatten() },
 				{ status: 400 }
 			);
 		}
-		if (!timeZoneId || typeof timeZoneId !== "string") {
-			return NextResponse.json(
-				{
-					error:
-						"Missing or invalid timeZoneId. Provide a valid IANA timezone identifier.",
-				},
-				{ status: 400 }
-			);
-		}
-		if (scheduleType === "custom" && (!intervalValue || !intervalUnit)) {
-			if (!["hours", "days", "weeks"].includes(intervalUnit)) {
-				return NextResponse.json(
-					{
-						error:
-							"Invalid interval unit. Allowed values are 'hours', 'days', 'weeks'.",
-					},
-					{ status: 400 }
-				);
-			}
-		}
+
+		const {
+			scheduleType,
+			intervalValue,
+			intervalUnit,
+			timeOfDay,
+			timeZoneId,
+		} = validation.data;
 
 		const threadsToken = await getCookie("threads-token");
 		if (!threadsToken) {
