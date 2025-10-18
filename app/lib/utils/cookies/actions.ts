@@ -36,3 +36,8 @@ export async function getCookie(name: string) {
 
 	return null;
 }
+
+export async function deleteCookie(name: string) {
+	const cookieStore = await cookies();
+	cookieStore.delete(name);
+}

@@ -119,11 +119,23 @@ export async function executePrompt(prompt: string) {
 }
 
 export async function logoutUser() {
-  const response = await fetch("/api/auth/logout", {
-    method: "POST",
-  });
+	const response = await fetch("/api/auth/logout", {
+		method: "GET",
+	});
 
-  if (!response.ok) {
-    throw new Error(`Error: ${response.statusText}`);
-  }
+	if (!response.ok) {
+		throw new Error("Failed to logout");
+	}
+}
+
+export async function deleteUser() {
+	const response = await fetch("/api/delete-user", {
+		method: "POST",
+	});
+
+	if (!response.ok) {
+		throw new Error("Failed to delete user data");
+	}
+
+	document.cookie = "threads-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }

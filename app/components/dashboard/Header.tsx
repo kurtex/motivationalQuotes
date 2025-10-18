@@ -1,6 +1,6 @@
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
-import { Bot, LogOut } from "lucide-react";
+import { Bot, LogOut, Trash2 } from "lucide-react";
 import { cn } from "@/app/lib/utils/utils";
 
 /**
@@ -10,14 +10,22 @@ import { cn } from "@/app/lib/utils/utils";
  * and navigation controls (logout).
  * 
  * @param {function} onLogout - Function to handle user logout
+ * @param {function} onDelete - Function to handle user data deletion
  * @param {boolean} isAutomated - Determines the automation status badge.
  */
 interface HeaderProps {
   onLogout: () => Promise<void>;
+  onDelete: () => Promise<void>;
   isAutomated: boolean;
 }
 
-export function Header ({ onLogout, isAutomated }: HeaderProps) {
+export function Header ({ onLogout, onDelete, isAutomated }: HeaderProps) {
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete all your data? This action cannot be undone.")) {
+      onDelete();
+    }
+  }
+
   return (
     <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-sm rounded-lg p-3 border border-slate-600/30">
       <div className="flex items-center gap-3">
@@ -42,6 +50,14 @@ export function Header ({ onLogout, isAutomated }: HeaderProps) {
         </Badge>
       </div>
       <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-slate-400 hover:text-slate-300 h-8 px-2"
+          onClick={handleDelete}
+        >
+          <Trash2 className="w-3 h-3" />
+        </Button>
         <Button
           variant="ghost"
           size="sm"

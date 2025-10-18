@@ -19,9 +19,9 @@ import {
 	saveScheduleConfig,
 	requestPreview,
 	executePrompt,
-	logoutUser,
-	reactivateSchedule,
-} from "@/app/lib/services/automationClient";
+				logoutUser,
+		deleteUser,
+		reactivateSchedule,} from "@/app/lib/services/automationClient";
 
 
 export default function SchedulerDashboard () {
@@ -169,6 +169,17 @@ export default function SchedulerDashboard () {
 		}
 	};
 
+	const handleDelete = async () => {
+		try {
+			await deleteUser();
+			alert("Your data has been deleted successfully!");
+			window.location.href = "/"; // Redirect to home page after deletion
+		} catch (error) {
+			console.error("Failed to delete user data:", error);
+			alert("Failed to delete user data. Please try again.");
+		}
+	};
+
 	const loadScheduledPost = async () => {
 		try {
 			const data = await fetchScheduledPostApi();
@@ -215,7 +226,7 @@ export default function SchedulerDashboard () {
 	return (
 		<div className="min-h-screen p-3 w-full">
 			<div className="max-w-6xl mx-auto space-y-4">
-				<Header onLogout={handleLogout} isAutomated={!!scheduledPost} />
+				<Header onLogout={handleLogout} onDelete={handleDelete} isAutomated={!!scheduledPost} />
 
 				<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 					<div className="lg:col-span-2 space-y-4">

@@ -265,6 +265,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	deletedQuotes: number;
 	deletedTokens: number;
 	deletedUsers: number;
+	deletedPrompts: number;
+	deletedScheduledPosts: number;
 }> {
 	await connectToDB();
 
@@ -282,6 +284,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 			deletedQuotes: 0,
 			deletedTokens: 0,
 			deletedUsers: 0,
+			deletedPrompts: 0,
+			deletedScheduledPosts: 0,
 		};
 	}
 
@@ -293,7 +297,13 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	// 3. Delete all tokens associated with the user
 	const tokenDeletionResult = await Token.deleteMany({ user_id: metaUserId });
 
-	// 4. Delete the user document itself
+	// 4. Delete all prompts associated with the user
+	const promptDeletionResult = await Prompt.deleteMany({ user: userId });
+
+	// 5. Delete all scheduled posts associated with the user
+	const scheduledPostDeletionResult = await ScheduledPost.deleteMany({ userId: userId });
+
+	// 6. Delete the user document itself
 	const userDeletionResult = await User.deleteOne({ _id: userId });
 
 	console.log(
@@ -301,6 +311,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	);
 	console.log(`- Deleted ${quoteDeletionResult.deletedCount} quotes.`);
 	console.log(`- Deleted ${tokenDeletionResult.deletedCount} tokens.`);
+	console.log(`- Deleted ${promptDeletionResult.deletedCount} prompts.`);
+	console.log(`- Deleted ${scheduledPostDeletionResult.deletedCount} scheduled posts.`);
 	console.log(`- Deleted ${userDeletionResult.deletedCount} users.`);
 
 	return {
@@ -308,6 +320,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 		deletedQuotes: quoteDeletionResult.deletedCount || 0,
 		deletedTokens: tokenDeletionResult.deletedCount || 0,
 		deletedUsers: userDeletionResult.deletedCount || 0,
+		deletedPrompts: promptDeletionResult.deletedCount || 0,
+		deletedScheduledPosts: scheduledPostDeletionResult.deletedCount || 0,
 	};
 }
 
