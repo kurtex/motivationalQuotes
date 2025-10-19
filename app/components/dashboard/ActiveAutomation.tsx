@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/app/components/ui/card";
 import { Button } from "@/app/components/ui/button";
 import { Cog, ChevronDown, ChevronUp } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "@/app/lib/utils/utils";
 
 /**
  * ActiveAutomation Component
@@ -15,7 +15,7 @@ interface ActiveAutomationProps {
   activePrompt: string | null;
 }
 
-export function ActiveAutomation({ activePrompt }: ActiveAutomationProps) {
+export function ActiveAutomation ({ activePrompt }: ActiveAutomationProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -35,8 +35,8 @@ export function ActiveAutomation({ activePrompt }: ActiveAutomationProps) {
             {activePrompt || "No active prompt set."}
           </p>
           {(activePrompt && activePrompt.length > 100) && (
-             <Button 
-              variant="link" 
+            <Button
+              variant="link"
               size="sm"
               onClick={() => setIsExpanded(!isExpanded)}
               className="text-slate-400 hover:text-slate-200 h-auto p-0 mt-2 text-xs"

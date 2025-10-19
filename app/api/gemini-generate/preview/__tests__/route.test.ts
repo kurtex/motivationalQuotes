@@ -69,7 +69,40 @@ describe('POST /api/gemini-generate/preview', () => {
     expect(mockedGenerateGeminiStream).toHaveBeenCalledWith(expect.stringContaining(mockPrompt));
   });
 
+  describe('Validation', () => {
+    it('should return 400 if prompt is missing', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({});
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received undefined');
+    });
+
+    it('should return 400 if prompt is an empty string', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: '   ' });
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Prompt is required');
+    });
+
+    it('should return 400 if prompt is not a string', async () => {
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: 9876 });
+        const response = await POST(mockRequest as NextRequest);
+        const jsonResponse = await response.json();
+
+        expect(response.status).toBe(400);
+        expect(jsonResponse.error).toBe('Invalid request data');
+        expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received number');
+    });
+  });
+
   it('should return 401 if no access token is found', async () => {
+    mockRequest.json = jest.fn().mockResolvedValue({ prompt: 'A valid prompt' }); // Add valid body
     mockedGetThreadsCookie.mockResolvedValue(null);
     const response = await POST(mockRequest as NextRequest);
     expect(response.status).toBe(401);

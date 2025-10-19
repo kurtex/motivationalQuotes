@@ -41,6 +41,7 @@ jest.mock("@/app/lib/database/models/ScheduledPost", () => {
 					userId: { _id: "user1", active_prompt: { text: "prompt1" } },
 					nextScheduledAt: new Date(),
 					status: "active",
+					timeZoneId: "UTC",
 					save: jest.fn().mockResolvedValue(true),
 				},
 			])
@@ -102,6 +103,7 @@ jest.spyOn(ScheduledPost, "find").mockImplementation(() => {
 					userId: { _id: "user1", active_prompt: { text: "prompt1" } },
 					nextScheduledAt: new Date(),
 					timeOfDay: "14:00",
+					timeZoneId: "UTC",
 					status: "active",
 					save: jest.fn().mockResolvedValue(true),
 				},
@@ -115,6 +117,7 @@ jest.spyOn(ScheduledPost, "find").mockImplementation(() => {
 						userId: { _id: "user1", active_prompt: { text: "prompt1" } },
 						nextScheduledAt: new Date(),
 						timeOfDay: "14:00",
+						timeZoneId: "UTC",
 						status: "active",
 						save: jest.fn().mockResolvedValue(true),
 					},

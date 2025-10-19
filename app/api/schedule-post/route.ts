@@ -1,91 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDB } from "@/app/lib/database/db";
-import ScheduledPost, {
-	IScheduledPost,
-} from "@/app/lib/database/models/ScheduledPost"; // Import IScheduledPost
+import ScheduledPost from "@/app/lib/database/models/ScheduledPost";
 import { getCookie } from "@/app/lib/utils/cookies/actions";
 import User from "@/app/lib/database/models/User";
 import { getMetaUserIdByThreadsAccessToken } from "@/app/lib/database/actions";
-
-// Helper function to calculate the next scheduled time
-function calculateNextScheduledAt(
-	scheduleType: IScheduledPost["scheduleType"],
-	timeOfDay: string, // HH:MM
-	intervalValue?: number,
-	intervalUnit?: IScheduledPost["intervalUnit"]
-): Date {
-	const [hours, minutes] = timeOfDay.split(":").map(Number);
-	let nextDate = new Date();
-	nextDate.setSeconds(0);
-	nextDate.setMilliseconds(0);
-
-	// Set the time of day
-	nextDate.setHours(hours);
-	nextDate.setMinutes(minutes);
-
-	// If the calculated time is in the past, move to the next day
-	if (nextDate.getTime() < Date.now()) {
-		nextDate.setDate(nextDate.getDate() + 1);
-	}
-
-	if (scheduleType === "weekly") {
-		nextDate.setDate(nextDate.getDate() + 7);
-	} else if (scheduleType === "monthly") {
-		nextDate.setMonth(nextDate.getMonth() + 1);
-	} else if (scheduleType === "custom" && intervalValue && intervalUnit) {
-		const now = new Date();
-		let currentIntervalDate = new Date(now);
-		currentIntervalDate.setHours(hours, minutes, 0, 0);
-
-		// If the current interval date is in the past, move to the next interval
-		while (currentIntervalDate.getTime() < now.getTime()) {
-			if (intervalUnit === "hours") {
-				currentIntervalDate.setHours(
-					currentIntervalDate.getHours() + intervalValue
-				);
-			} else if (intervalUnit === "days") {
-				currentIntervalDate.setDate(
-					currentIntervalDate.getDate() + intervalValue
-				);
-			} else if (intervalUnit === "weeks") {
-				currentIntervalDate.setDate(
-					currentIntervalDate.getDate() + intervalValue * 7
-				);
-			}
-		}
-		nextDate = currentIntervalDate;
-	}
-	// For 'daily' and 'weekly', the initial 'nextDate' calculation (today/tomorrow at timeOfDay) is sufficient.
-	// 'weekly' might need more complex logic if specific day of week is required, but for now,
-	// it implies 'same day next week' if today's time has passed.
-
-	return nextDate;
-}
+import { calculateNextScheduledAt } from "@/app/lib/utils/schedule/calculateNextScheduledAt";
+import { schedulePostSchema } from "./schema";
 
 export async function POST(req: NextRequest) {
 	await connectToDB();
 
 	try {
-		const { scheduleType, intervalValue, intervalUnit, timeOfDay } =
-			await req.json();
+		const body = await req.json();
+		const validation = schedulePostSchema.safeParse(body);
 
-		if (!scheduleType || !timeOfDay) {
+		if (!validation.success) {
 			return NextResponse.json(
-				{ error: `Schedule type or time of day missing. scheduleType: ${scheduleType}, timeOfDay: ${timeOfDay}` },
+				{ error: "Invalid request data", issues: validation.error.flatten() },
 				{ status: 400 }
 			);
 		}
-		if (scheduleType === "custom" && (!intervalValue || !intervalUnit)) {
-			if (!["hours", "days", "weeks"].includes(intervalUnit)) {
-				return NextResponse.json(
-					{
-						error:
-							"Invalid interval unit. Allowed values are 'hours', 'days', 'weeks'.",
-					},
-					{ status: 400 }
-				);
-			}
-		}
+
+		const {
+			scheduleType,
+			intervalValue,
+			intervalUnit,
+			timeOfDay,
+			timeZoneId,
+		} = validation.data;
 
 		const threadsToken = await getCookie("threads-token");
 		if (!threadsToken) {
@@ -115,6 +57,7 @@ export async function POST(req: NextRequest) {
 		const nextScheduledAt = calculateNextScheduledAt(
 			scheduleType,
 			timeOfDay,
+			timeZoneId,
 			intervalValue,
 			intervalUnit
 		);
@@ -129,6 +72,7 @@ export async function POST(req: NextRequest) {
 			scheduledPost.intervalUnit = intervalUnit;
 			scheduledPost.timeOfDay = timeOfDay;
 			scheduledPost.nextScheduledAt = nextScheduledAt;
+			scheduledPost.timeZoneId = timeZoneId;
 			scheduledPost.status = "active"; // Reactivate if it was paused/error
 			await scheduledPost.save();
 		} else {
@@ -140,6 +84,7 @@ export async function POST(req: NextRequest) {
 				intervalUnit,
 				timeOfDay,
 				nextScheduledAt,
+				timeZoneId,
 				status: "active",
 			});
 			await scheduledPost.save();

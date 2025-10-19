@@ -9,6 +9,7 @@ import Prompt from "./models/Prompt";
 import { GeminiClient } from "../ai/geminiClient";
 import { GeminiModel } from "../ai/geminiModels";
 import ScheduledPost, { IScheduledPost } from "./models/ScheduledPost"; // Added import
+import type { SerializedScheduledPost } from "../types/schedule";
 import {
 	encryptSecret,
 	decryptSecret,
@@ -264,6 +265,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	deletedQuotes: number;
 	deletedTokens: number;
 	deletedUsers: number;
+	deletedPrompts: number;
+	deletedScheduledPosts: number;
 }> {
 	await connectToDB();
 
@@ -281,6 +284,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 			deletedQuotes: 0,
 			deletedTokens: 0,
 			deletedUsers: 0,
+			deletedPrompts: 0,
+			deletedScheduledPosts: 0,
 		};
 	}
 
@@ -292,7 +297,13 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	// 3. Delete all tokens associated with the user
 	const tokenDeletionResult = await Token.deleteMany({ user_id: metaUserId });
 
-	// 4. Delete the user document itself
+	// 4. Delete all prompts associated with the user
+	const promptDeletionResult = await Prompt.deleteMany({ user: userId });
+
+	// 5. Delete all scheduled posts associated with the user
+	const scheduledPostDeletionResult = await ScheduledPost.deleteMany({ userId: userId });
+
+	// 6. Delete the user document itself
 	const userDeletionResult = await User.deleteOne({ _id: userId });
 
 	console.log(
@@ -300,6 +311,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	);
 	console.log(`- Deleted ${quoteDeletionResult.deletedCount} quotes.`);
 	console.log(`- Deleted ${tokenDeletionResult.deletedCount} tokens.`);
+	console.log(`- Deleted ${promptDeletionResult.deletedCount} prompts.`);
+	console.log(`- Deleted ${scheduledPostDeletionResult.deletedCount} scheduled posts.`);
 	console.log(`- Deleted ${userDeletionResult.deletedCount} users.`);
 
 	return {
@@ -307,6 +320,8 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 		deletedQuotes: quoteDeletionResult.deletedCount || 0,
 		deletedTokens: tokenDeletionResult.deletedCount || 0,
 		deletedUsers: userDeletionResult.deletedCount || 0,
+		deletedPrompts: promptDeletionResult.deletedCount || 0,
+		deletedScheduledPosts: scheduledPostDeletionResult.deletedCount || 0,
 	};
 }
 
@@ -358,7 +373,7 @@ export async function getTokenExpiration(
  */
 export async function getScheduledPostForUser(
 	threadsAccessToken: string
-): Promise<IScheduledPost | null> {
+): Promise<SerializedScheduledPost | null> {
 	await connectToDB();
 
 	const metaUserId = await getMetaUserIdByThreadsAccessToken(
@@ -372,18 +387,21 @@ export async function getScheduledPostForUser(
 	const scheduledPost = await ScheduledPost.findOne({ userId: user._id });
 
 	if (scheduledPost) {
-		// Manually convert _id to string and Date objects to ISO strings
-		const plainScheduledPost: IScheduledPost = {
-			...scheduledPost.toObject(),
-			_id: scheduledPost._id.toString(), // Convert ObjectId to string
-			userId: scheduledPost.userId.toString(), // Convert ObjectId to string
-			createdAt: scheduledPost.createdAt.toISOString(), // Convert Date to ISO string
-			updatedAt: scheduledPost.updatedAt.toISOString(), // Convert Date to ISO string
-			nextScheduledAt: scheduledPost.nextScheduledAt.toISOString(), // Convert Date to ISO string
-			// lastPostedAt might be null, so check before converting
-			lastPostedAt: scheduledPost.lastPostedAt
-				? scheduledPost.lastPostedAt.toISOString()
-				: undefined,
+		const plainScheduledPost: SerializedScheduledPost = {
+			_id: scheduledPost._id.toString(),
+			userId: scheduledPost.userId.toString(),
+				scheduleType: scheduledPost.scheduleType,
+				intervalValue: scheduledPost.intervalValue,
+				intervalUnit: scheduledPost.intervalUnit,
+				timeOfDay: scheduledPost.timeOfDay,
+				timeZoneId: scheduledPost.timeZoneId ?? "UTC",
+				lastPostedAt: scheduledPost.lastPostedAt
+					? scheduledPost.lastPostedAt.toISOString()
+					: undefined,
+			nextScheduledAt: scheduledPost.nextScheduledAt.toISOString(),
+			status: scheduledPost.status,
+			createdAt: scheduledPost.createdAt.toISOString(),
+			updatedAt: scheduledPost.updatedAt.toISOString(),
 		};
 		return plainScheduledPost;
 	}

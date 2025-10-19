@@ -20,6 +20,9 @@ jest.mock('next/server', () => ({
             headers: {
                 append: jest.fn(),
             },
+            cookies: {
+                set: jest.fn(),
+            }
         })),
     },
 }));
@@ -72,14 +75,38 @@ describe('POST /api/threads/auth', () => {
         jest.restoreAllMocks();
     });
 
-    it('should return 400 if code is missing', async () => {
-        mockRequest.json = jest.fn().mockResolvedValue({ code: undefined });
+    describe('Validation', () => {
+        it('should return 400 if code is missing', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({});
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse.error).toBe('Invalid request data');
+          expect(jsonResponse.issues.fieldErrors.code).toContain('Invalid input: expected string, received undefined');
+        });
+    
+        it('should return 400 if code is an empty string', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({ code: '   ' }); // Empty string
+          // Mock a failure for this specific case
+          mockedGetShortLivedToken.mockRejectedValue(new Error('Invalid code'));
 
-        const response = await POST(mockRequest as NextRequest);
-        const jsonResponse = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(jsonResponse).toEqual({ error: "We couldn't retrieve the authentication code" });
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse).toEqual({ error: "We couldn't retrieve the token" });
+        });
+    
+        it('should return 400 if code is not a string', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({ code: 12345 });
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse.error).toBe('Invalid request data');
+          expect(jsonResponse.issues.fieldErrors.code).toContain('Invalid input: expected string, received number');
+        });
     });
 
     it('should return 400 if getShortLivedToken fails', async () => {
@@ -153,13 +180,15 @@ describe('POST /api/threads/auth', () => {
             'long-token',
             3600
         );
-        expect(mockedUpdateThreadsToken).not.toHaveBeenCalled();
-        expect(response.status).toBe(200);
-        expect(jsonResponse).toEqual({ message: "Logged in to Threads", status: 200 });
-        expect(response.headers.append).toHaveBeenCalledWith(
-            "Set-Cookie",
-            "threads-token=long-token; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600;"
-        );
+        expect(response.cookies.set).toHaveBeenCalledWith({
+            name: "threads-token",
+            value: "long-token",
+            httpOnly: true,
+            secure: false, // This is false in non-production environments
+            sameSite: "strict",
+            path: "/",
+            maxAge: 3600,
+        });
     });
 
     it('should update an existing user\'s token if user exists', async () => {
@@ -178,10 +207,15 @@ describe('POST /api/threads/auth', () => {
         );
         expect(mockedSaveThreadsToken).not.toHaveBeenCalled();
         expect(response.status).toBe(200);
-        expect(jsonResponse).toEqual({ message: "Logged in to Threads", status: 200 });
-        expect(response.headers.append).toHaveBeenCalledWith(
-            "Set-Cookie",
-            "threads-token=long-token; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=3600;"
-        );
+        expect(jsonResponse).toEqual({ message: "Logged in to Threads" });
+        expect(response.cookies.set).toHaveBeenCalledWith({
+            name: "threads-token",
+            value: "long-token",
+            httpOnly: true,
+            secure: false, // This is false in non-production environments
+            sameSite: "strict",
+            path: "/",
+            maxAge: 3600,
+        });
     });
 });

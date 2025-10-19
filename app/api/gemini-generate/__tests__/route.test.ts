@@ -44,6 +44,8 @@ describe('POST /api/gemini-generate', () => {
 
     it('should return 401 if access token is missing', async () => {
         mockedGetThreadsCookie.mockResolvedValue(null);
+        // Provide a valid body to ensure it passes validation before the auth check
+        mockRequest.json = jest.fn().mockResolvedValue({ prompt: 'valid prompt' });
 
         const response = await POST(mockRequest as NextRequest);
         const jsonResponse = await response.json();
@@ -52,27 +54,47 @@ describe('POST /api/gemini-generate', () => {
         expect(jsonResponse).toEqual({ error: 'Unauthorized' });
     });
 
-    it('should return 400 if prompt is empty', async () => {
-        mockRequest.json = jest.fn().mockResolvedValue({ prompt: '   ' });
-
-        const response = await POST(mockRequest as NextRequest);
-        const jsonResponse = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(jsonResponse).toEqual({ error: 'Prompt is required' });
-        expect(mockedSavePrompt).not.toHaveBeenCalled();
-    });
-
-    it('should return 400 if prompt exceeds max length', async () => {
-        const longPrompt = 'a'.repeat(1001);
-        mockRequest.json = jest.fn().mockResolvedValue({ prompt: longPrompt });
-
-        const response = await POST(mockRequest as NextRequest);
-        const jsonResponse = await response.json();
-
-        expect(response.status).toBe(400);
-        expect(jsonResponse).toEqual({ error: 'Prompt is too long' });
-        expect(mockedSavePrompt).not.toHaveBeenCalled();
+    describe('Validation', () => {
+        it('should return 400 if prompt is missing', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({});
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse.error).toBe('Invalid request data');
+          expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received undefined');
+        });
+    
+        it('should return 400 if prompt is an empty string', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({ prompt: '   ' });
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse.error).toBe('Invalid request data');
+          expect(jsonResponse.issues.fieldErrors.prompt).toContain('Prompt is required');
+        });
+    
+        it('should return 400 if prompt is not a string', async () => {
+          mockRequest.json = jest.fn().mockResolvedValue({ prompt: 12345 });
+          const response = await POST(mockRequest as NextRequest);
+          const jsonResponse = await response.json();
+    
+          expect(response.status).toBe(400);
+          expect(jsonResponse.error).toBe('Invalid request data');
+          expect(jsonResponse.issues.fieldErrors.prompt).toContain('Invalid input: expected string, received number');
+        });
+    
+        it('should return 400 if prompt is too long', async () => {
+            const longPrompt = 'a'.repeat(1001);
+            mockRequest.json = jest.fn().mockResolvedValue({ prompt: longPrompt });
+            const response = await POST(mockRequest as NextRequest);
+            const jsonResponse = await response.json();
+    
+            expect(response.status).toBe(400);
+            expect(jsonResponse.error).toBe('Invalid request data');
+            expect(jsonResponse.issues.fieldErrors.prompt).toContain('Prompt is too long');
+        });
     });
 
     it('should return 500 if saving the prompt fails', async () => {

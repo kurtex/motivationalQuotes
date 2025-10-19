@@ -11,103 +11,83 @@ import {
 } from "@/app/lib/database/actions";
 import User from "@/app/lib/database/models/User";
 import { connectToDB } from "@/app/lib/database/db";
+import { threadsAuthSchema } from "./schema";
 
 export async function POST(request: Request) {
-	const { code } = await request.json();
+	const body = await request.json();
+	const validation = threadsAuthSchema.safeParse(body);
 
-	if (!code) {
-		return NextResponse.json({ error: "We couldn't retrieve the authentication code" }, { status: 400 });
+	if (!validation.success) {
+		return NextResponse.json(
+			{ error: "Invalid request data", issues: validation.error.flatten() },
+			{ status: 400 }
+		);
+	}
+	const { code } = validation.data;
+
+	let shortLivedToken;
+	try {
+		// Step 1: Exchange authorization code for a short-lived token.
+		// A failure here is a client-side error (invalid code).
+		shortLivedToken = await getShortLivedToken(code);
+		if (!shortLivedToken?.access_token) {
+			throw new Error("Failed to retrieve short-lived token.");
+		}
+	} catch (error) {
+		console.error("Threads auth error (short-lived token):", error);
+		return NextResponse.json(
+			{ error: "We couldn't retrieve the token" },
+			{ status: 400 }
+		);
 	}
 
 	try {
-		// Get the short-lived token using the code received from the Threads OAuth redirect.
-		const shortLiveToken = await getShortLivedToken(code);
+		// Step 2: Exchange short-lived token for a long-lived token.
+		// A failure from this point on is a server-side or Meta-side issue.
+		const longLivedToken = await getLongLivedToken(
+			shortLivedToken.access_token
+		);
 
-		// Get the long-lived token using the short-lived token.
-		let longLivedToken;
-		try {
-			longLivedToken = await getLongLivedToken(shortLiveToken.access_token);
-		} catch (error) {
-			return NextResponse.json({ error: "There was an error logging in to Threads" }, { status: 500 });
+		const { user_id: metaUserId } = shortLivedToken;
+		const { access_token: accessToken, expires_in: expiresIn } = longLivedToken;
+
+		if (!metaUserId || !accessToken || !expiresIn) {
+			throw new Error("Invalid token data received from Meta.");
 		}
 
-		let token;
+		await connectToDB();
 
-		try {
-			const metaUserId = shortLiveToken.user_id;
+		const existingUser = await User.findOne({ meta_user_id: metaUserId });
 
-			if (!metaUserId) {
-				throw new Error("Meta user ID is required");
-			}
-
-			const accessToken = longLivedToken.access_token;
-
-			if (!accessToken) {
-				throw new Error("Access token is required");
-			}
-
-			const expiresIn = longLivedToken.expires_in;
-
-			if (!expiresIn) {
-				throw new Error("Expiration time is required");
-			}
-
-			await connectToDB();
-
-			// Check if the user already exists in the database.
-			const existingUser = await User.findOne({
+		if (existingUser) {
+			await updateThreadsToken(metaUserId.toString(), accessToken, expiresIn);
+		} else {
+			await User.create({
 				meta_user_id: metaUserId,
 			});
-
-			if (existingUser) {
-				token = await updateThreadsToken(
-					metaUserId,
-					longLivedToken.access_token,
-					longLivedToken.expires_in
-				);
-			} else {
-				await User.create({
-					meta_user_id: metaUserId,
-				});
-
-				// Save the long-lived token to the database.
-				token = await saveThreadsToken(
-					metaUserId,
-					longLivedToken.access_token,
-					longLivedToken.expires_in
-				);
-			}
-		} catch (error) {
-			return NextResponse.json({ error: "There was an error logging in to Threads" }, { status: 500 });
+			await saveThreadsToken(metaUserId.toString(), accessToken, expiresIn);
 		}
 
 		const response = NextResponse.json({
 			message: "Logged in to Threads",
-			status: 200,
 		});
 
-		// Create a cookie with the short-lived token using NextJS cookies.
-		// await createCookie({
-		// 	name: "threads-token",
-		// 	value: shortLiveToken.access_token,
-		// 	httpOnly: true,
-		// 	secure: true,
-		// 	path: "/",
-		// });
-
-		// Set the cookie in the response headers.
-		// Note: The cookie is set to expire after 60 days.
-		response.headers.append(
-			"Set-Cookie",
-				`threads-token=${
-					longLivedToken.access_token
-				}; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=${
-					token!.expires_in
-				};`
-		);
+		response.cookies.set({
+			name: "threads-token",
+			value: accessToken,
+			httpOnly: true,
+			secure: process.env.NODE_ENV === "production",
+			sameSite: "strict",
+			path: "/",
+			maxAge: expiresIn,
+		});
 
 		return response;
 	} catch (error) {
-		return NextResponse.json({ error: "We couldn't retrieve the token" }, { status: 400 });
+		console.error("Threads auth error (long-lived token or DB):", error);
+		return NextResponse.json(
+			{ error: "There was an error logging in to Threads" },
+			{ status: 500 }
+		);
 	}
 }

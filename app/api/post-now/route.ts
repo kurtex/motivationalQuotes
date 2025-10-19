@@ -2,17 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 import { postThreadAction } from "@/app/lib/threads-api/threads-posts/actions";
 import { saveUniqueGeminiQuote } from "@/app/lib/database/actions"; // Import saveUniqueGeminiQuote
 import { getCookie } from "@/app/lib/utils/cookies/actions"; // Import getCookie
+import { postNowSchema } from "./schema";
 
 export async function POST(req: NextRequest) {
 	try {
-		const { prompt } = await req.json(); // Receive prompt instead of quoteText
+		const body = await req.json();
+		const validation = postNowSchema.safeParse(body);
 
-		if (!prompt) {
+		if (!validation.success) {
 			return NextResponse.json(
-				{ error: "Prompt is required" },
+				{ error: "Invalid request data", issues: validation.error.flatten() },
 				{ status: 400 }
 			);
 		}
+
+		const { prompt } = validation.data;
 
 		const threadsToken = await getCookie("threads-token");
 		if (!threadsToken) {

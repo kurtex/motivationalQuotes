@@ -1,3 +1,5 @@
+import type { SerializedScheduledPost } from "../types/schedule";
+
 export async function updateAutomationPrompt(prompt: string) {
   const response = await fetch("/api/gemini-generate", {
     method: "POST",
@@ -28,7 +30,7 @@ export async function getScheduledPost() {
   if (!response.ok) {
     throw new Error(`Error: ${response.statusText}`);
   }
-  return response.json() as Promise<{ scheduledPost: any }>; // TODO: refine type
+  return response.json() as Promise<{ scheduledPost?: SerializedScheduledPost }>;
 }
 
 export async function clearSchedule() {
@@ -40,11 +42,26 @@ export async function clearSchedule() {
   }
 }
 
+export async function reactivateSchedule() {
+  const response = await fetch("/api/reactivate-schedule", {
+    method: "POST",
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const message = errorData.error || response.statusText || "Failed to reactivate schedule";
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<{ nextScheduledAt: string }>;
+}
+
 interface SaveSchedulePayload {
   scheduleType: string;
   timeOfDay: string;
   intervalValue?: number;
   intervalUnit?: string;
+  timeZoneId: string;
 }
 
 export async function saveScheduleConfig(payload: SaveSchedulePayload) {
@@ -102,11 +119,23 @@ export async function executePrompt(prompt: string) {
 }
 
 export async function logoutUser() {
-  const response = await fetch("/api/auth/logout", {
-    method: "POST",
-  });
+	const response = await fetch("/api/auth/logout", {
+		method: "GET",
+	});
 
-  if (!response.ok) {
-    throw new Error(`Error: ${response.statusText}`);
-  }
+	if (!response.ok) {
+		throw new Error("Failed to logout");
+	}
+}
+
+export async function deleteUser() {
+	const response = await fetch("/api/delete-user", {
+		method: "POST",
+	});
+
+	if (!response.ok) {
+		throw new Error("Failed to delete user data");
+	}
+
+	document.cookie = "threads-token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
 }

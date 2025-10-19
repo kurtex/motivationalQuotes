@@ -3,17 +3,7 @@ import { Badge } from "@/app/components/ui/badge";
 import { Button } from "@/app/components/ui/button";
 import { Separator } from "@/app/components/ui/separator";
 import { Timer } from "lucide-react";
-
-/**
- * ScheduledPost Interface
- * 
- * Represents the structure of a scheduled post configuration.
- */
-interface ScheduledPost {
-  scheduleType: string;
-  timeOfDay: string;
-  nextScheduledAt: string;
-}
+import type { SerializedScheduledPost } from "@/app/lib/types/schedule";
 
 /**
  * ScheduleCard Component
@@ -26,12 +16,40 @@ interface ScheduledPost {
  * @param {boolean} isClearing - Whether the schedule clearing is in progress
  */
 interface ScheduleCardProps {
-  scheduledPost: ScheduledPost | null;
+  scheduledPost: SerializedScheduledPost | null;
   onClearSchedule: () => Promise<void>;
+  onReactivateSchedule: () => Promise<void>;
   isClearing: boolean;
+  isReactivating: boolean;
 }
 
-export function ScheduleCard({ scheduledPost, onClearSchedule, isClearing }: ScheduleCardProps) {
+export function ScheduleCard ({
+  scheduledPost,
+  onClearSchedule,
+  onReactivateSchedule,
+  isClearing,
+  isReactivating,
+}: ScheduleCardProps) {
+  const effectiveTimeZone = scheduledPost?.timeZoneId ?? "UTC";
+  const nextScheduledLocal = scheduledPost
+    ? new Intl.DateTimeFormat(undefined, {
+      timeZone: effectiveTimeZone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(new Date(scheduledPost.nextScheduledAt))
+    : null;
+  const statusColor = scheduledPost
+    ? scheduledPost.status === "error"
+      ? "text-red-400"
+      : scheduledPost.status === "paused"
+        ? "text-amber-300"
+        : "text-emerald-300"
+    : "text-slate-300";
+
   return (
     <Card className="bg-slate-900/40 border-slate-600/30 backdrop-blur-sm">
       <CardHeader className="pb-2 pt-3 px-4">
@@ -50,13 +68,19 @@ export function ScheduleCard({ scheduledPost, onClearSchedule, isClearing }: Sch
               </Badge>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-300">TIME:</span>
+              <span className="text-slate-300">TIME ({effectiveTimeZone}):</span>
               <span className="text-slate-300 font-mono">{scheduledPost.timeOfDay}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-slate-300">NEXT:</span>
               <span className="text-white text-xs">
-                {new Date(scheduledPost.nextScheduledAt).toLocaleString()}
+                {nextScheduledLocal}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-300">STATUS:</span>
+              <span className={`${statusColor} text-xs font-medium uppercase`}>
+                {scheduledPost.status}
               </span>
             </div>
           </div>
@@ -66,6 +90,17 @@ export function ScheduleCard({ scheduledPost, onClearSchedule, isClearing }: Sch
           </div>
         )}
         <Separator className="bg-slate-700/50" />
+        {scheduledPost?.status === "error" && (
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full h-7 text-xs"
+            onClick={onReactivateSchedule}
+            disabled={isReactivating}
+          >
+            {isReactivating ? "Reactivating..." : "REACTIVATE"}
+          </Button>
+        )}
         <Button
           variant="destructive"
           size="sm"
