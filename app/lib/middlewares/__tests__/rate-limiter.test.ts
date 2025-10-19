@@ -3,8 +3,11 @@ import { rateLimiter, cache } from "../rate-limiter";
 
 // Mock NextRequest
 const mockRequest = (ip: string, url: string) => {
+	// The actual NextRequest object is complex, so we mock only what we need.
 	return {
-		ip,
+		headers: new Headers({
+			'x-forwarded-for': ip,
+		}),
 		nextUrl: {
 			pathname: url,
 		},
@@ -17,7 +20,7 @@ describe("rateLimiter", () => {
 		cache.clear();
 	});
 
-	it("should allow requests within the limit", async () => {
+	it("should allow requests within the limit", () => {
 		const limiter = rateLimiter({
 			uniqueTokenPerInterval: 5,
 			interval: 60000,
@@ -26,11 +29,11 @@ describe("rateLimiter", () => {
 		for (let i = 0; i < 5; i++) {
 			const req = mockRequest("127.0.0.1", "/api/test");
 			const res = limiter(req);
-			expect(res.status).not.toBe(429);
+			expect(res).toBeUndefined();
 		}
 	});
 
-	it("should block requests that exceed the limit", async () => {
+	it("should block requests that exceed the limit", () => {
 		const limiter = rateLimiter({
 			uniqueTokenPerInterval: 2,
 			interval: 60000,
@@ -38,15 +41,14 @@ describe("rateLimiter", () => {
 
 		const req = mockRequest("127.0.0.1", "/api/test");
 
-		// First two requests should be allowed
-		let res = limiter(req);
-		expect(res.status).not.toBe(429);
-		res = limiter(req);
-		expect(res.status).not.toBe(429);
+		// First two requests should be allowed (return undefined)
+		expect(limiter(req)).toBeUndefined();
+		expect(limiter(req)).toBeUndefined();
 
 		// Third request should be blocked
-		res = limiter(req);
-		expect(res.status).toBe(429);
+		const res = limiter(req);
+		expect(res).toBeDefined();
+		expect(res?.status).toBe(429);
 	});
 
 	it("should reset the count after the interval", async () => {
@@ -58,18 +60,17 @@ describe("rateLimiter", () => {
 		const req = mockRequest("127.0.0.1", "/api/test");
 
 		// First request should be allowed
-		let res = limiter(req);
-		expect(res.status).not.toBe(429);
+		expect(limiter(req)).toBeUndefined();
 
 		// Second request should be blocked
-		res = limiter(req);
-		expect(res.status).toBe(429);
+		const res = limiter(req);
+		expect(res).toBeDefined();
+		expect(res?.status).toBe(429);
 
 		// Wait for the interval to pass
-		await new Promise((resolve) => setTimeout(resolve, 1000));
+		await new Promise((resolve) => setTimeout(resolve, 1100)); // Wait a bit longer than the interval
 
 		// Third request should be allowed again
-		res = limiter(req);
-		expect(res.status).not.toBe(429);
+		expect(limiter(req)).toBeUndefined();
 	});
 });

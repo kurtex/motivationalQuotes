@@ -11,8 +11,8 @@ export const cache = new LRUCache<string, number>({
 });
 
 export const rateLimiter = (options: RateLimiterOptions) => {
-	return (req: NextRequest) => {
-    const ip = req.headers?.get('x-forwarded-for') ?? '127.0.0.1';
+	return (req: NextRequest): NextResponse | undefined => {
+		const ip = req.headers?.get("x-forwarded-for") ?? "127.0.0.1";
 		const route = req.nextUrl.pathname;
 
 		const rateLimiterKey = `${route}:${ip}`;
@@ -24,6 +24,6 @@ export const rateLimiter = (options: RateLimiterOptions) => {
 
 		cache.set(rateLimiterKey, tokenCount + 1, { ttl: options.interval });
 
-		return new NextResponse(null, { status: 200 });
+		return undefined;
 	};
 };
