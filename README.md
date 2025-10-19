@@ -1,112 +1,116 @@
-# Motivational Quote Generator
+## Motivational Quotes Generator
 
-A Next.js App Router project that helps creators design short-form copy with Google Gemini and auto-publish it on Threads. Users authenticate through Threads OAuth, manage their prompts, and the platform schedules recurring posts for them.
+This web application generates motivational quotes in Spanish using Google Gemini, authenticates users via Threads (OAuth 2.0), and allows users to schedule posts to their Threads profile. The application is built with Next.js (App Router) and TypeScript, with MongoDB for data storage and GitLab CI for automation.
 
 ## Key Features
 
-- **Gemini-powered copy** – generate polished Spanish posts through Google Gemini.
-- **Threads OAuth login** – secure exchange of short-lived codes for long-lived tokens.
-- **Prompt management** – update the active prompt that guides future posts.
-- **Automated publishing** – run scheduled Threads posts via Github actions.
-- **Data deletion compliance** – honour Meta’s callback for account removal.
+-   **Motivational Quote Generation**: Creates unique motivational quotes in Spanish using Google Gemini.
+-   **User Authentication**: Securely authenticates users using their Threads account via OAuth 2.0.
+-   **Scheduled Posts**: Allows users to schedule the automatic posting of generated quotes to their Threads profile.
+-   **Post Automation**: A cron job checks every five minutes for scheduled posts and publishes them to Threads.
+-   **Token Management**: Automatically refreshes user tokens to maintain authentication.
+-   **Data Persistence**: Stores user data, prompts, quotes, and scheduled posts in a MongoDB database.
+-   **Data De-duplication**: Avoids duplicate quotes by using a hashing and semantic similarity checking mechanism.
+-   **Meta Data Deletion**: Includes an endpoint to handle data deletion requests from Meta.
 
 ## Tech Stack
 
-- **Framework**: Next.js (App Router, TypeScript)
-- **Styling**: Tailwind CSS + custom UI primitives
-- **Database**: MongoDB via Mongoose
-- **AI**: Google Gemini SDK
-- **Scheduling**: Github CI/CD scheduled pipelines hitting API routes
-- **Testing**: Jest + React Testing Library
-- **Package manager**: pnpm
+-   **Framework**: Next.js (v15, App Router)
+-   **Language**: TypeScript
+-   **Database**: MongoDB + Mongoose
+-   **Package Manager**: pnpm
+-   **APIs**: Google Gemini, Threads
+-   **Styling**: Tailwind CSS (v4) + PostCSS
+-   **Testing**: Jest + React Testing Library
+-   **Linting**: ESLint + Prettier
+-   **Automation**: GitHub Actions for CI and scheduled jobs.
 
-## Local Development
+## Getting Started
 
-1. **Prerequisites**
+### Prerequisites
 
-   - Node.js 20+
-   - pnpm 9+
-   - MongoDB instance
-   - Threads app credentials (App ID, App Secret)
-   - Google Gemini API key
+-   Node.js v20.x or later
+-   pnpm v8 or later
+-   MongoDB instance
 
-2. **Install dependencies**
+### Installation
 
-   ```bash
-   pnpm install
-   ```
+1.  Clone the repository:
+    ```bash
+    git clone https://github.com/your-username/motivational-quotes.git
+    ```
+2.  Navigate to the project directory:
+    ```bash
+    cd motivational-quotes
+    ```
+3.  Install dependencies:
+    ```bash
+    pnpm install
+    ```
+4.  Create a `.env.local` file by copying the example file:
+    ```bash
+    cp .env.example .env.local
+    ```
 
-3. **Environment variables** – create `.env.local` with:
-   | Variable | Purpose |
-   | --- | --- |
-   | `GEMINI_API_KEY` | Access token for the Gemini SDK. |
-   | `MONGO_URI` | Connection string for the MongoDB cluster (database `user_tokens`). |
-   | `CLIENT_SECRET` | Threads App Secret used for OAuth exchanges and Meta callbacks. |
-   | `CRON_SECRET` | Shared secret checked by scheduled endpoints. |
-   | `TOKEN_ENCRYPTION_KEY` | Base64-encoded 32-byte key used to encrypt stored Threads tokens. |
-   | `NEXT_PUBLIC_CLIENT_ID` | Threads App ID exposed to the browser for OAuth. |
-   | `NEXT_PUBLIC_BASE_URL` | Public origin that builds redirect URLs. |
-   | `NEXT_PUBLIC_API_STATE` | Random string that validates OAuth callbacks. |
-   | `NEXT_PUBLIC_SUPPORT_EMAIL` | Address shown in the data deletion page. |
+### Configuration
 
-4. **Run dev server**
+Update the `.env.local` file with your credentials and configuration:
 
-   ```bash
-   pnpm dev
-   ```
+-   `GEMINI_API_KEY`: Your Google Gemini API key.
+-   `MONGO_URI`: Your MongoDB connection string.
+-   `CRON_SECRET`: A secret key to protect the cron job endpoints.
+-   `NEXT_PUBLIC_BASE_URL`: The base URL of your application.
+-   `NEXT_PUBLIC_CLIENT_ID`: Your Threads application client ID.
+-   `CLIENT_SECRET`: Your Threads application client secret.
+-   `NEXT_PUBLIC_API_STATE`: A state string for OAuth 2.0.
 
-   Visit http://localhost:3000 and complete the Threads login to generate prompts.
+## Usage
 
-5. **Run tests**
-   ```bash
-   pnpm test
-   ```
+To run the development server, use the following command:
 
-## Threads & OAuth Configuration
+```bash
+pnpm dev
+```
 
-1. In Meta’s developer dashboard:
-   - Enable **Web OAuth Login**.
-   - Add `https://<tu-dominio>/redirect` (local: `http://localhost:3000/redirect`) to **Valid OAuth Redirect URIs** – it must match `NEXT_PUBLIC_BASE_URL` + `/redirect`.
-   - Register the data deletion URL `https://<tu-dominio>/api/threads/data-deletion-callback`.
-2. Copy the App ID and App Secret into `NEXT_PUBLIC_CLIENT_ID` and `CLIENT_SECRET`.
-3. Choose a strong `NEXT_PUBLIC_API_STATE` value and reuse it across client/server to reject forged callbacks.
+The application will be available at `http://localhost:3000`.
 
-## Deployment on Vercel
+## CI/CD
 
-1. Import the Git repository and configure the same environment variables listed above in the Production and Preview environments.
-2. Ensure `NEXT_PUBLIC_BASE_URL` matches the live domain (e.g., `https://motivational-quotes.vercel.app`).
-3. Vercel serves over HTTPS by default, which lets the OAuth flow persist the secure Threads cookie.
+The project uses GitHub Actions for continuous integration and scheduled jobs:
 
-## Security Notes
+-   **Continuous Integration**: The `ci.yml` workflow runs on every push and pull request to the `master` branch, installing dependencies and running tests.
+-   **Refresh Tokens**: The `refresh-tokens.yml` workflow runs daily to refresh expiring user tokens.
+-   **Check Scheduled Posts**: The `check-posts.yml` workflow runs every five minutes to check for and publish scheduled posts.
 
-- Never commit `.env*` files or share secret values outside the deployment pipeline.
-- Rotate `CRON_SECRET`, `CLIENT_SECRET`, `GEMINI_API_KEY`, and `TOKEN_ENCRYPTION_KEY` if you suspect exposure.
-- Limit CI schedules and database users to the minimal roles/IPs needed for automation.
+## Project Structure
 
-## Scheduled Automation (CI/CD)
+The project follows a standard Next.js App Router structure:
 
-Create two scheduled pipelines in your CI provider that run small `curl` jobs against the deployed API. Both must include the shared `CRON_SECRET` value.
+-   `app/`: Contains the application's pages, API routes, and components.
+-   `app/api/`: The API endpoints for the application.
+-   `app/lib/`: Contains the application's core logic, including database actions, AI clients, and API clients.
+-   `app/lib/database/models/`: The Mongoose models for the database.
+-   `.github/workflows/`: The CI/CD workflows for the project.
 
-| Purpose                         | Endpoint                                               | Headers                              | Recommended cron |
-| ------------------------------- | ------------------------------------------------------ | ------------------------------------ | ---------------- |
-| Refresh expiring Threads tokens | `POST https://<tu-dominio>/api/threads/refresh-tokens` | `Authorization: Bearer $CRON_SECRET` | `0 3 * * *`      |
-| Publish queued posts            | `POST https://<tu-dominio>/api/check-scheduled-posts`  | `Authorization: Bearer $CRON_SECRET` | `* * * * *`      |
+## API Endpoints
 
-Both endpoints return 401 unless the Bearer token matches `CRON_SECRET`.
+| Method | Route                                 | Auth Required                        | Description                                             |
+| ------ | ------------------------------------- | ------------------------------------ | ------------------------------------------------------- |
+| GET    | `/api/threads/auth`                   | None (uses `code`)                   | Exchanges an authorization code for a long-lived token. |
+| POST   | `/api/gemini-generate`                | Cookie                               | Generates a new quote using the active prompt.          |
+| POST   | `/api/threads/refresh-tokens`         | Scheduled job (Authorization Header) | Refreshes all expiring long-lived tokens.               |
+| POST   | `/api/threads/data-deletion-callback` | Meta Signature                       | Handles data deletion requests from Meta.               |
+| POST   | `/api/check-scheduled-posts`          | Scheduled job (Authorization Header) | Checks for and publishes scheduled posts.               |
+| GET    | `/api/auth/logout`                    | Cookie                               | Clears the user's session cookie to log them out.       |
 
-## Useful Scripts
+## Data Models
 
-- `pnpm dev` – start the dev server with Turbopack.
-- `pnpm build` – create a production build.
-- `pnpm start` – serve the production build.
-- `pnpm lint` – run ESLint & Prettier.
-- `pnpm test` – execute the Jest suite.
+-   **User**: Stores user information from Threads.
+-   **Token**: Stores OAuth tokens for users.
+-   **Prompt**: Stores user-defined prompts for quote generation.
+-   **Quote**: Stores the generated quotes.
+-   **ScheduledPost**: Stores information about scheduled posts.
 
-## Directory Highlights
+## License
 
-- `app/` – App Router routes, API handlers, server actions.
-- `app/components/` – dashboard UI, authentication flows, reusable primitives.
-- `app/lib/` – Gemini client, database models/actions, Threads API helpers.
-- `tests/` – integration tests for API routes.
-
-With Threads credentials, MongoDB connectivity, and automated schedules in place, the application can continuously generate Gemini copy and publish it to Threads without manual intervention.
+This project is licensed under the MIT License.
