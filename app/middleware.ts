@@ -17,6 +17,7 @@ export async function middleware(req: NextRequest) {
 export const config = {
   matcher: [
     '/api/gemini-generate',
+    '/api/gemini-generate/preview',
     '/api/threads/auth',
     '/api/post-now',
     '/api/delete-user',
