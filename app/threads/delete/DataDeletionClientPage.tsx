@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 
-export default function DataDeletionClientPage() {
+export default function DataDeletionClientPage () {
   const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL;
   const router = useRouter();
 
@@ -42,7 +42,7 @@ export default function DataDeletionClientPage() {
             </p>
           </div>
 
-          <div>
+          {/* <div>
             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100 mb-2">Opción 2: Solicitud de eliminación manual</h2>
             <p>
               Si no puedes usar el método anterior o tienes alguna pregunta, puedes solicitar la eliminación de tus datos manualmente.
@@ -62,7 +62,7 @@ export default function DataDeletionClientPage() {
                 La dirección de correo de soporte no está configurada. Por favor, contacta al administrador del sitio.
               </p>
             )}
-          </div>
+          </div> */}
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
