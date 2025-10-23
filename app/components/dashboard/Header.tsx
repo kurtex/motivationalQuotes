@@ -1,7 +1,8 @@
 import { Button } from "@/app/components/ui/button";
 import { Badge } from "@/app/components/ui/badge";
-import { Bot, LogOut, Trash2 } from "lucide-react";
+import { Bot, LogOut, Trash2, HelpCircle } from "lucide-react";
 import { cn } from "@/app/lib/utils/utils";
+import Link from "next/link";
 
 /**
  * Header Component
@@ -57,6 +58,16 @@ export function Header ({ onLogout, onDelete, isAutomated }: HeaderProps) {
           onClick={handleDelete}
         >
           <Trash2 className="w-3 h-3" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-slate-400 hover:text-slate-300 h-8 px-2"
+          asChild
+        >
+          <Link href="/threads/delete">
+            <HelpCircle className="w-3 h-3" />
+          </Link>
         </Button>
         <Button
           variant="ghost"
