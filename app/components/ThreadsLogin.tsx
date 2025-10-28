@@ -12,8 +12,10 @@ const ThreadsLogin: React.FC = () => {
 		url.searchParams.append("scope", "threads_basic,threads_content_publish");
 		url.searchParams.append("response_type", "code");
 		url.searchParams.append("state", process.env.NEXT_PUBLIC_API_STATE!);
+		url.searchParams.append("auth_type", "reauthenticate");
 
-		window.open(url, "_system");
+		const finalUrl = url.toString() + '#weblink';
+		window.open(finalUrl, "_system");
 	};
 
 	return (

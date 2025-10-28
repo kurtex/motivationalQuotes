@@ -27,9 +27,7 @@ export async function POST(req: NextRequest) {
 			);
 		}
 	} catch (error: any) {
-		const errorMessage =
-			error.message ||
-			"An unexpected error occurred while clearing the schedule.";
-		return NextResponse.json({ error: errorMessage }, { status: 500 });
+		console.error("Error clearing schedule:", error);
+		return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
 	}
 }

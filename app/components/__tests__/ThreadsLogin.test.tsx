@@ -47,7 +47,10 @@ describe('ThreadsLogin', () => {
         expectedUrl.searchParams.append('scope', 'threads_basic,threads_content_publish');
         expectedUrl.searchParams.append('response_type', 'code');
         expectedUrl.searchParams.append('state', 'mock-api-state');
+        expectedUrl.searchParams.append('auth_type', 'reauthenticate'); // Ensure the test expects this parameter
 
-        expect(window.open).toHaveBeenCalledWith(expectedUrl, '_system');
+        const finalExpectedUrl = expectedUrl.toString() + '#weblink';
+
+        expect(window.open).toHaveBeenCalledWith(finalExpectedUrl, '_system');
     });
 });

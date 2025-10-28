@@ -106,6 +106,6 @@ describe('POST /api/gemini-generate', () => {
         const jsonResponse = await response.json();
 
         expect(response.status).toBe(500);
-        expect(jsonResponse).toEqual({ error: 'Database error' });
+        expect(jsonResponse).toEqual({ error: 'An internal server error occurred.' });
     });
 });

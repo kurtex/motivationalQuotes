@@ -48,9 +48,6 @@ export async function POST(req: NextRequest) {
 		);
 	} catch (error: any) {
 		console.error("Error posting quote immediately:", error);
-
-		const errorMessage =
-			error.message || "An unexpected error occurred while posting the quote.";
-		return NextResponse.json({ error: errorMessage }, { status: 500 });
+		return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
 	}
 }

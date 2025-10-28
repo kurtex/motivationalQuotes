@@ -18,6 +18,6 @@ export async function GET(req: NextRequest) {
     }
   } catch (error: any) {
     console.error("Error fetching scheduled post:", error);
-    return NextResponse.json({ error: error.message || "Failed to fetch scheduled post" }, { status: 500 });
+    return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
   }
 }

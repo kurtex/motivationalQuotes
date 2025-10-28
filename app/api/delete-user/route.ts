@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
 
     return response;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error deleting user:", error);
+    return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
   }
 }
