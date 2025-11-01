@@ -16,23 +16,17 @@ import Link from "next/link";
  */
 interface HeaderProps {
   onLogout: () => Promise<void>;
-  onDelete: () => Promise<void>;
   isAutomated: boolean;
+  username: string;
 }
 
-export function Header ({ onLogout, onDelete, isAutomated }: HeaderProps) {
-  const handleDelete = () => {
-    if (window.confirm("Are you sure you want to delete all your data? This action cannot be undone.")) {
-      onDelete();
-    }
-  }
-
+export function Header ({ onLogout, isAutomated, username }: HeaderProps) {
   return (
     <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-sm rounded-lg p-3 border border-slate-600/30">
       <div className="flex items-center gap-3">
         <div className="bg-gradient-to-r from-slate-600 to-slate-500 text-white px-3 py-1.5 rounded-md font-medium text-sm flex items-center gap-2">
           <Bot className="w-4 h-4" />
-          xjujovi
+          <Link href="/">{username}</Link>
         </div>
         <Badge
           variant="secondary"
@@ -55,18 +49,10 @@ export function Header ({ onLogout, onDelete, isAutomated }: HeaderProps) {
           variant="ghost"
           size="sm"
           className="text-slate-400 hover:text-slate-300 h-8 px-2"
-          onClick={handleDelete}
-        >
-          <Trash2 className="w-3 h-3" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-slate-400 hover:text-slate-300 h-8 px-2"
           asChild
         >
           <Link href="/threads/delete">
-            <HelpCircle className="w-3 h-3" />
+            <Trash2 className="w-3 h-3" />
           </Link>
         </Button>
         <Button

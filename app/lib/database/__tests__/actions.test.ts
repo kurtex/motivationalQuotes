@@ -4,7 +4,7 @@ import {
     getMetaUserIdByThreadsAccessToken,
     saveGeminiQuote,
     saveUniqueGeminiQuote,
-    deleteUserAndAssociatedData,
+    deleteUser,
     savePrompt,
     getActivePrompt,
     getTokenExpiration,
@@ -14,6 +14,7 @@ import Quote from "../models/Quote";
 import Token from "../models/Token";
 import User from "../models/User";
 import Prompt from "../models/Prompt";
+import ScheduledPost from "../models/ScheduledPost";
 import { GeminiClient } from "../../ai/geminiClient";
 import crypto from "crypto";
 
@@ -22,10 +23,29 @@ jest.mock("../db", () => ({
     connectToDB: jest.fn().mockResolvedValue(null),
 }));
 
-jest.mock("../models/Quote");
-jest.mock("../models/Token");
-jest.mock("../models/User");
-jest.mock("../models/Prompt");
+jest.mock("../models/Quote", () => ({
+    deleteMany: jest.fn(),
+    findOne: jest.fn(),
+    create: jest.fn(),
+    find: jest.fn(),
+}));
+jest.mock("../models/Token", () => ({
+    findOneAndUpdate: jest.fn(),
+    create: jest.fn(),
+    findOne: jest.fn(),
+    deleteMany: jest.fn(),
+}));
+jest.mock("../models/User", () => ({
+    findOne: jest.fn(),
+    deleteOne: jest.fn(),
+}));
+jest.mock("../models/Prompt", () => ({
+    create: jest.fn(),
+    deleteMany: jest.fn(),
+}));
+jest.mock("../models/ScheduledPost", () => ({
+    deleteMany: jest.fn(),
+}));
 jest.mock("../../ai/geminiClient");
 jest.mock("crypto", () => ({
     createHash: jest.fn().mockReturnValue({
@@ -75,6 +95,11 @@ describe("Database Actions", () => {
             MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
             (MockedUser.findOne as jest.Mock).mockReturnValue({
                 populate: jest.fn().mockResolvedValue(mockUser),
+            });
+
+            (Quote.find as jest.Mock).mockReturnValue({
+                sort: jest.fn().mockReturnThis(),
+                limit: jest.fn().mockResolvedValue([]),
             });
 
             const result = await getActivePrompt("access-token");
@@ -144,6 +169,53 @@ describe("Database Actions", () => {
             MockedToken.findOne.mockResolvedValue(null);
             const result = await getTokenExpiration("non-existent-token");
             expect(result).toBeNull();
+        });
+    });
+
+    describe("deleteUser", () => {
+        it("should delete a user and all their associated data", async () => {
+            const mockUser = { _id: "user-id", meta_user_id: "meta-user-id" };
+            MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
+            MockedUser.findOne.mockResolvedValue(mockUser);
+            Quote.deleteMany.mockResolvedValue({ deletedCount: 1 });
+            Token.deleteMany.mockResolvedValue({ deletedCount: 1 });
+            Prompt.deleteMany.mockResolvedValue({ deletedCount: 1 });
+            ScheduledPost.deleteMany.mockResolvedValue({ deletedCount: 1 });
+            User.deleteOne.mockResolvedValue({ deletedCount: 1 });
+
+            const result = await deleteUser("access-token");
+
+            expect(MockedToken.findOne).toHaveBeenCalledWith({ token_hash: "mock-hash" });
+            expect(MockedUser.findOne).toHaveBeenCalledWith({ meta_user_id: "meta-user-id" });
+            expect(Quote.deleteMany).toHaveBeenCalledWith({ user: "user-id" });
+            expect(Token.deleteMany).toHaveBeenCalledWith({ user_id: "meta-user-id" });
+            expect(Prompt.deleteMany).toHaveBeenCalledWith({ user: "user-id" });
+            expect(ScheduledPost.deleteMany).toHaveBeenCalledWith({ userId: "user-id" });
+            expect(User.deleteOne).toHaveBeenCalledWith({ _id: "user-id" });
+            expect(result).toEqual({
+                success: true,
+                deletedQuotes: 1,
+                deletedTokens: 1,
+                deletedUsers: 1,
+                deletedPrompts: 1,
+                deletedScheduledPosts: 1,
+            });
+        });
+
+        it("should return success if the user is not found", async () => {
+            MockedToken.findOne.mockResolvedValue({ user_id: "meta-user-id" });
+            MockedUser.findOne.mockResolvedValue(null);
+
+            const result = await deleteUser("access-token");
+
+            expect(result).toEqual({
+                success: true,
+                deletedQuotes: 0,
+                deletedTokens: 0,
+                deletedUsers: 0,
+                deletedPrompts: 0,
+                deletedScheduledPosts: 0,
+            });
         });
     });
 });

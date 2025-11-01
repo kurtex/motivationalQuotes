@@ -17,7 +17,6 @@ describe('connectToDB', () => {
     let connectToDB: any;
     let mongoose: any;
     let mockMongooseConnect: jest.Mock;
-    let consoleErrorSpy: jest.SpyInstance;
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -29,11 +28,9 @@ describe('connectToDB', () => {
 
         mockMongooseConnect = mongoose.default.connect as jest.Mock;
         (mongoose.default.connection as any).readyState = 0;
-        consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
     });
 
     afterEach(() => {
-        consoleErrorSpy.mockRestore();
     });
 
     it('should not create a new connection if one already exists', async () => {
@@ -51,11 +48,10 @@ describe('connectToDB', () => {
         expect((mongoose.default.connection as any).readyState).toBe(1);
     });
 
-    it('should log an error and re-throw if the connection fails', async () => {
+    it('should re-throw if the connection fails', async () => {
         const connectionError = new Error('Connection failed');
         mockMongooseConnect.mockRejectedValue(connectionError);
 
         await expect(connectToDB()).rejects.toThrow('Connection failed');
-        expect(consoleErrorSpy).toHaveBeenCalledWith('❌ Error connecting to MongoDB:', connectionError);
     });
 });

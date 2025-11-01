@@ -40,8 +40,6 @@ export async function POST(req: NextRequest) {
 
 		await postThreadAction(formData);
 
-		console.log("Quote posted successfully:", generatedQuote);
-
 		return NextResponse.json(
 			{ message: "Quote posted successfully", quote: generatedQuote },
 			{ status: 200 }

@@ -19,12 +19,12 @@ import {
 	saveScheduleConfig,
 	requestPreview,
 	executePrompt,
-				logoutUser,
-		deleteUser,
-		reactivateSchedule,} from "@/app/lib/services/automationClient";
+	logoutUser,
+reactivateSchedule,
+} from "@/app/lib/services/automationClient";
 
 
-export default function SchedulerDashboard () {
+export default function SchedulerDashboard ({ username }: { username: string; }) {
 	const [scheduleType, setScheduleType] = useState("daily");
 	const [scheduleTime, setScheduleTime] = useState("11:35");
 	const [activePrompt, setActivePrompt] = useState<string | null>(null);
@@ -133,8 +133,7 @@ export default function SchedulerDashboard () {
 
 		} catch (error: any) {
 			console.error("Failed to generate preview:", error);
-			// No usamos alert aquí porque ahora el componente ControlsCard maneja los errores
-			throw error; // Propagamos el error para que ControlsCard lo maneje
+			throw error; // We propagate the error so that ControlsCard handles it
 		} finally {
 			setIsPreviewing(false);
 		}
@@ -151,8 +150,7 @@ export default function SchedulerDashboard () {
 			alert("Quote posted successfully!");
 		} catch (error: any) {
 			console.error("Failed to post quote:", error);
-			// No usamos alert aquí porque ahora el componente ControlsCard maneja los errores
-			throw error; // Propagamos el error para que ControlsCard lo maneje
+			throw error; // We propagate the error so that ControlsCard handles it
 		} finally {
 			setIsExecuting(false);
 		}
@@ -169,16 +167,7 @@ export default function SchedulerDashboard () {
 		}
 	};
 
-	const handleDelete = async () => {
-		try {
-			await deleteUser();
-			alert("Your data has been deleted successfully!");
-			window.location.href = "/"; // Redirect to home page after deletion
-		} catch (error) {
-			console.error("Failed to delete user data:", error);
-			alert("Failed to delete user data. Please try again.");
-		}
-	};
+
 
 	const loadScheduledPost = async () => {
 		try {
@@ -226,7 +215,7 @@ export default function SchedulerDashboard () {
 	return (
 		<div className="min-h-screen p-3 w-full">
 			<div className="max-w-6xl mx-auto space-y-4">
-				<Header onLogout={handleLogout} onDelete={handleDelete} isAutomated={!!scheduledPost} />
+				<Header onLogout={handleLogout} isAutomated={!!scheduledPost} username={username} />
 
 				<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 					<div className="lg:col-span-2 space-y-4">

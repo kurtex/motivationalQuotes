@@ -15,7 +15,7 @@ const ThreadsLogin: React.FC = () => {
 		url.searchParams.append("auth_type", "reauthenticate");
 
 		const finalUrl = url.toString() + '#weblink';
-		window.open(finalUrl, "_system");
+		window.location.assign(finalUrl);
 	};
 
 	return (
