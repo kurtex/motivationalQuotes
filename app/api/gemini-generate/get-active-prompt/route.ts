@@ -15,8 +15,9 @@ export async function GET(req: NextRequest) {
 		const activePrompt = await getActivePrompt(accessTokenCookie);
 		return NextResponse.json({ promptText: activePrompt });
 	} catch (error: any) {
+		console.error("Error getting active prompt:", error);
 		return NextResponse.json(
-			{ error: error.message || "Failed to get active prompt" },
+			{ error: "An internal server error occurred." },
 			{ status: 500 }
 		);
 	}

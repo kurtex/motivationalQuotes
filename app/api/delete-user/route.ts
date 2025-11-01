@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCookie, deleteCookie } from '@/app/lib/utils/cookies/actions';
+import { getCookie } from '@/app/lib/utils/cookies/actions';
 import { deleteUserAndAssociatedData, getMetaUserIdByThreadsAccessToken } from '@/app/lib/database/actions';
 
 export async function POST(req: NextRequest) {
@@ -13,10 +13,11 @@ export async function POST(req: NextRequest) {
     const result = await deleteUserAndAssociatedData(metaUserId);
 
     const response = NextResponse.json(result, { status: 200 });
-    await deleteCookie('threads-token');
+    response.cookies.delete('threads-token');
 
     return response;
   } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error("Error deleting user:", error);
+    return NextResponse.json({ error: "An internal server error occurred." }, { status: 500 });
   }
 }

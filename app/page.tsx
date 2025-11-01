@@ -5,6 +5,7 @@ import { connectToDB } from "./lib/database/db";
 
 
 import { getTokenExpiration } from "./lib/database/actions";
+import { getThreadsUsername } from "./lib/threads-api/user-data/actions";
 
 /**
  * This is the main page of the application.
@@ -15,12 +16,13 @@ export default async function Home () {
   await connectToDB();
   const access_token = await getCookie("threads-token");
   const tokenExpiration = access_token ? await getTokenExpiration(access_token) : null;
+  const username = access_token ? await getThreadsUsername(access_token) : null;
 
   return (
     <div className="min-h-screen w-screen flex flex-col justify-center items-center bg-gradient-to-br from-slate-950 via-slate-900/30 to-slate-950">
-      {access_token && tokenExpiration && (
+      {access_token && tokenExpiration && username && (
         <>
-          <SchedulerDashboard />
+          <SchedulerDashboard username={username} />
         </>
       )}
       {!access_token && (

@@ -69,7 +69,7 @@ Update the `.env.local` file with your credentials and configuration:
 To run the development server, use the following command:
 
 ```bash
-pnpm dev
+pnpm dev --turbopack
 ```
 
 The application will be available at `http://localhost:3000`.
@@ -96,12 +96,20 @@ The project follows a standard Next.js App Router structure:
 
 | Method | Route                                 | Auth Required                        | Description                                             |
 | ------ | ------------------------------------- | ------------------------------------ | ------------------------------------------------------- |
-| GET    | `/api/threads/auth`                   | None (uses `code`)                   | Exchanges an authorization code for a long-lived token. |
-| POST   | `/api/gemini-generate`                | Cookie                               | Generates a new quote using the active prompt.          |
-| POST   | `/api/threads/refresh-tokens`         | Scheduled job (Authorization Header) | Refreshes all expiring long-lived tokens.               |
-| POST   | `/api/threads/data-deletion-callback` | Meta Signature                       | Handles data deletion requests from Meta.               |
-| POST   | `/api/check-scheduled-posts`          | Scheduled job (Authorization Header) | Checks for and publishes scheduled posts.               |
 | GET    | `/api/auth/logout`                    | Cookie                               | Clears the user's session cookie to log them out.       |
+| POST   | `/api/delete-user`                    | Cookie                               | Deletes a user and all their associated data.           |
+| POST   | `/api/gemini-generate`                | Cookie                               | Generates a new quote using the active prompt.          |
+| GET    | `/api/gemini-generate/get-active-prompt`| Cookie                               | Gets the user's currently active prompt.                |
+| POST   | `/api/gemini-generate/preview`        | Cookie                               | Generates a preview of a quote.                         |
+| POST   | `/api/post-now`                       | Cookie                               | Generates and immediately posts a quote to Threads.     |
+| POST   | `/api/schedule-post`                  | Cookie                               | Schedules a post to be published later.                 |
+| GET    | `/api/get-scheduled-post`             | Cookie                               | Retrieves the details of a scheduled post.              |
+| POST   | `/api/clear-schedule`                 | Cookie                               | Clears the user's post schedule.                        |
+| POST   | `/api/reactivate-schedule`            | Cookie                               | Reactivates a paused or cleared schedule.               |
+| POST   | `/api/check-scheduled-posts`          | Scheduled job (Authorization Header) | Checks for and publishes scheduled posts.               |
+| GET    | `/api/threads/auth`                   | None (uses `code`)                   | Exchanges an authorization code for a long-lived token. |
+| POST   | `/api/threads/data-deletion-callback` | Meta Signature                       | Handles data deletion requests from Meta.               |
+| POST   | `/api/threads/refresh-tokens`         | Scheduled job (Authorization Header) | Refreshes all expiring long-lived tokens.               |
 
 ## Data Models
 

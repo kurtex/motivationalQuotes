@@ -48,8 +48,6 @@ export async function POST(request: NextRequest) {
 			{ status: 200 }
 		);
 	} catch (error) {
-		console.error(error);
-
 		const isValidationError =
 			error instanceof Error &&
 			(error.message.includes("Invalid") ||
@@ -57,11 +55,6 @@ export async function POST(request: NextRequest) {
 
 		const errorMessage =
 			error instanceof Error ? error.message : "An unknown error occurred";
-
-		console.error(
-			"Meta Deletion Callback Error: An unexpected error occurred.",
-			errorMessage
-		);
 
 		if (isValidationError) {
 			return NextResponse.json(

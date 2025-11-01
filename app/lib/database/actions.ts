@@ -256,6 +256,26 @@ export async function saveUniqueGeminiQuote(
  * Deletes a user and all their associated data from the database.
  * This includes their quotes and API tokens.
  *
+ * @param threadsAccessToken The user's Threads access token.
+ * @returns An object indicating the success status and the number of deleted documents.
+ * @throws An error if the user cannot be found or if any of the deletion steps fail.
+ */
+export async function deleteUser(threadsAccessToken: string): Promise<{
+	success: boolean;
+	deletedQuotes: number;
+	deletedTokens: number;
+	deletedUsers: number;
+	deletedPrompts: number;
+	deletedScheduledPosts: number;
+}> {
+	const metaUserId = await getMetaUserIdByThreadsAccessToken(threadsAccessToken);
+	return await deleteUserAndAssociatedData(metaUserId);
+}
+
+/**
+ * Deletes a user and all their associated data from the database.
+ * This includes their quotes and API tokens.
+ *
  * @param metaUserId The user's unique ID from Meta.
  * @returns An object indicating the success status and the number of deleted documents.
  * @throws An error if the user cannot be found or if any of the deletion steps fail.
@@ -276,9 +296,6 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 	if (!user) {
 		// If the user is not found, there is no data to delete.
 		// This is not an error, as the goal is to have no data for this user.
-		console.log(
-			`Data Deletion: User with meta_user_id ${metaUserId} not found. No data to delete.`
-		);
 		return {
 			success: true,
 			deletedQuotes: 0,
@@ -305,15 +322,6 @@ export async function deleteUserAndAssociatedData(metaUserId: string): Promise<{
 
 	// 6. Delete the user document itself
 	const userDeletionResult = await User.deleteOne({ _id: userId });
-
-	console.log(
-		`Data Deletion: Successfully deleted data for user ${metaUserId}.`
-	);
-	console.log(`- Deleted ${quoteDeletionResult.deletedCount} quotes.`);
-	console.log(`- Deleted ${tokenDeletionResult.deletedCount} tokens.`);
-	console.log(`- Deleted ${promptDeletionResult.deletedCount} prompts.`);
-	console.log(`- Deleted ${scheduledPostDeletionResult.deletedCount} scheduled posts.`);
-	console.log(`- Deleted ${userDeletionResult.deletedCount} users.`);
 
 	return {
 		success: true,

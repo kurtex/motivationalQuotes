@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
         // It's important to handle errors inside the stream as well, but for now, this will catch initial setup errors.
         console.error("Error in preview stream route:", error);
         return NextResponse.json(
-            { error: error.message || "Failed to generate preview" },
+            { error: "An internal server error occurred." },
             { status: 500 }
         );
     }

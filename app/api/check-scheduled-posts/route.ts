@@ -125,13 +125,11 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		console.log(`Processed ${processedCount} posts successfully.`);
-
 		return NextResponse.json({ processedCount, errors }, { status: 200 });
 	} catch (error: any) {
 		console.error("Error in check-scheduled-posts:", error);
 		return NextResponse.json(
-			{ error: error.message || "Failed to check scheduled posts" },
+			{ error: "An internal server error occurred." },
 			{ status: 500 }
 		);
 	}

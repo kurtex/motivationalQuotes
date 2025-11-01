@@ -55,7 +55,7 @@ export async function POST() {
 		}
 
 		return NextResponse.json(
-			{ error: error.message || "Failed to reactivate schedule" },
+			{ error: "An internal server error occurred." },
 			{ status: 500 }
 		);
 	}

@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
 	} catch (error: any) {
 		console.error("Error updating schedule:", error);
 		return NextResponse.json(
-			{ error: error.message || "Failed to update schedule" },
+			{ error: "An internal server error occurred." },
 			{ status: 500 }
 		);
 	}

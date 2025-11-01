@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 		return NextResponse.json({ promptText: savedPrompt });
 	} catch (error: any) {
 		return NextResponse.json(
-			{ error: error.message || "Failed to save prompt" },
+			{ error: "An internal server error occurred." },
 			{ status: 500 }
 		);
 	}
