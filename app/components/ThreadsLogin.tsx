@@ -14,8 +14,12 @@ const ThreadsLogin: React.FC = () => {
 		url.searchParams.append("state", process.env.NEXT_PUBLIC_API_STATE!);
 		url.searchParams.append("auth_type", "reauthenticate");
 
-		const finalUrl = url.toString() + '#weblink';
-		window.open(finalUrl, "_system");
+		const finalUrl = url.toString();
+		const popup = window.open(finalUrl, "_blank", "noopener,noreferrer");
+
+		if (!popup) {
+			window.location.assign(finalUrl);
+		}
 	};
 
 	return (
