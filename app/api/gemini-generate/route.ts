@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
 		const savedPrompt = await savePrompt(validatedPrompt, accessTokenCookie);
 		return NextResponse.json({ promptText: savedPrompt });
 	} catch (error: any) {
-		console.error("Error saving prompt:", error);
 		return NextResponse.json(
 			{ error: "An internal server error occurred." },
 			{ status: 500 }

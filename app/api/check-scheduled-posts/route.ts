@@ -125,8 +125,6 @@ export async function POST(req: NextRequest) {
 			}
 		}
 
-		console.log(`Processed ${processedCount} posts successfully.`);
-
 		return NextResponse.json({ processedCount, errors }, { status: 200 });
 	} catch (error: any) {
 		console.error("Error in check-scheduled-posts:", error);
