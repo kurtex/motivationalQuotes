@@ -1,6 +1,6 @@
 ## Motivational Quotes Generator
 
-This web application generates motivational quotes in Spanish using Google Gemini, authenticates users via Threads (OAuth 2.0), and allows users to schedule posts to their Threads profile. The application is built with Next.js (App Router) and TypeScript, with MongoDB for data storage and GitLab CI for automation.
+This web application generates motivational quotes in Spanish using Google Gemini, authenticates users via Threads (OAuth 2.0), and allows users to schedule posts to their Threads profile. The application is built with Next.js (App Router) and TypeScript, with MongoDB for data storage and GitHub Actions for automation.
 
 ## Key Features
 
@@ -47,11 +47,6 @@ This web application generates motivational quotes in Spanish using Google Gemin
     ```bash
     pnpm install
     ```
-4.  Create a `.env.local` file by copying the example file:
-    ```bash
-    cp .env.example .env.local
-    ```
-
 ### Configuration
 
 Update the `.env.local` file with your credentials and configuration:
@@ -63,6 +58,16 @@ Update the `.env.local` file with your credentials and configuration:
 -   `NEXT_PUBLIC_CLIENT_ID`: Your Threads application client ID.
 -   `CLIENT_SECRET`: Your Threads application client secret.
 -   `NEXT_PUBLIC_API_STATE`: A state string for OAuth 2.0.
+-   `TOKEN_ENCRYPTION_KEY`: Base64-encoded 32-byte key used to encrypt Threads access tokens at rest.
+
+Create the `.env.local` file manually (for example, by copying `.env.local.example` if you maintain one in your fork) and ensure `TOKEN_ENCRYPTION_KEY` is generated securely. A quick option is `openssl rand -base64 32`.
+
+### Meta App Requirements
+
+To use the Threads OAuth flow and API endpoints, you need a Meta developer app configured for Threads:
+- Register an app in the [Meta for Developers](https://developers.facebook.com/) console with Threads permissions.
+- Configure the app’s OAuth redirect URI to `https://<your-domain>/redirect` (or the corresponding value for `NEXT_PUBLIC_BASE_URL`).
+- Populate `NEXT_PUBLIC_CLIENT_ID`, `CLIENT_SECRET`, and `NEXT_PUBLIC_API_STATE` with the values issued by Meta.
 
 ## Usage
 
@@ -107,7 +112,7 @@ The project follows a standard Next.js App Router structure:
 | POST   | `/api/clear-schedule`                 | Cookie                               | Clears the user's post schedule.                        |
 | POST   | `/api/reactivate-schedule`            | Cookie                               | Reactivates a paused or cleared schedule.               |
 | POST   | `/api/check-scheduled-posts`          | Scheduled job (Authorization Header) | Checks for and publishes scheduled posts.               |
-| GET    | `/api/threads/auth`                   | None (uses `code`)                   | Exchanges an authorization code for a long-lived token. |
+| POST   | `/api/threads/auth`                   | None (JSON body with `code`)         | Exchanges an authorization code for a long-lived token. |
 | POST   | `/api/threads/data-deletion-callback` | Meta Signature                       | Handles data deletion requests from Meta.               |
 | POST   | `/api/threads/refresh-tokens`         | Scheduled job (Authorization Header) | Refreshes all expiring long-lived tokens.               |
 
