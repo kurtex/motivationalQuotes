@@ -212,48 +212,84 @@ export default function SchedulerDashboard ({ username }: { username: string; })
 		loadScheduledPost();
 	}, []);
 
-	return (
-		<div className="min-h-screen p-3 w-full">
-			<div className="max-w-6xl mx-auto space-y-4">
-				<Header onLogout={handleLogout} isAutomated={!!scheduledPost} username={username} />
-
-				<div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-					<div className="lg:col-span-2 space-y-4">
-						<ActiveAutomation activePrompt={activePrompt} />
-						<UpdateAutomation onSubmit={handleSubmitPrompt} />
-					</div>
-
-					<div className="space-y-4">
-						<ScheduleCard
-							scheduledPost={scheduledPost}
-							onClearSchedule={handleClearSchedule}
-							onReactivateSchedule={handleReactivateSchedule}
-							isClearing={isClearing}
-							isReactivating={isReactivating}
-						/>
-						<ConfigCard
-							scheduleType={scheduleType}
-							scheduleTime={scheduleTime}
-							timeZoneId={timeZoneId}
-							onScheduleTypeChange={setScheduleType}
-							onScheduleTimeChange={setScheduleTime}
-							onSaveConfig={handleSaveConfig}
-							isSavingConfig={isSavingConfig}
-						/>
-					</div>
-
-					<div className="space-y-4">
-						<ControlsCard
-							onPreview={handlePreview}
-							onExecute={handleExecute}
-							previewQuote={previewQuote}
-							isPreviewing={isPreviewing}
-							isExecuting={isExecuting}
-						/>
-						<StatusCard isOnline={!!scheduledPost} />
-					</div>
-				</div>
-			</div>
-		</div>
-	);
-}
+	  return (
+	    <div className="min-h-screen w-full bg-gradient-to-br from-amber-50 via-orange-50 to-rose-50 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 p-4 md:p-8">
+	      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+	        <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/10 rounded-full filter blur-3xl opacity-20 animate-blob" />
+	        <div className="absolute bottom-0 left-0 w-96 h-96 bg-rose-500/10 rounded-full filter blur-3xl opacity-20 animate-blob animation-delay-2000" />
+	      </div>
+	      <div className="relative max-w-7xl mx-auto space-y-6">
+	        <Header onLogout={handleLogout} isAutomated={!!scheduledPost} username={username} />
+	
+	                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+	
+	                          <div className="space-y-6">
+	
+	                            <ActiveAutomation activePrompt={activePrompt} />
+	
+	                            <UpdateAutomation onSubmit={handleSubmitPrompt} />
+	
+	                          </div>
+	
+	                
+	
+	                          <div className="space-y-6">
+	
+	                            <ConfigCard
+	
+	                              scheduleType={scheduleType}
+	
+	                              scheduleTime={scheduleTime}
+	
+	                              timeZoneId={timeZoneId}
+	
+	                              onScheduleTypeChange={setScheduleType}
+	
+	                              onScheduleTimeChange={setScheduleTime}
+	
+	                              onSaveConfig={handleSaveConfig}
+	
+	                              isSavingConfig={isSavingConfig}
+	
+	                            />
+	
+	                            <ScheduleCard
+	
+	                              scheduledPost={scheduledPost}
+	
+	                              onClearSchedule={handleClearSchedule}
+	
+	                              onReactivateSchedule={handleReactivateSchedule}
+	
+	                              isClearing={isClearing}
+	
+	                              isReactivating={isReactivating}
+	
+	                            />
+	
+	                          </div>
+	
+	                
+	
+	                          <div className="space-y-6">
+	
+	                            <StatusCard isOnline={!!scheduledPost} />
+	
+	                            <ControlsCard
+	
+	                              onPreview={handlePreview}
+	
+	                              onExecute={handleExecute}
+	
+	                              previewQuote={previewQuote}
+	
+	                              isPreviewing={isPreviewing}
+	
+	                              isExecuting={isExecuting}
+	
+	                            />
+	
+	                          </div>	        </div>
+	      </div>
+	    </div>
+	  );}

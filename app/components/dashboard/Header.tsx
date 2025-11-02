@@ -22,56 +22,58 @@ interface HeaderProps {
 
 export function Header ({ onLogout, isAutomated, username }: HeaderProps) {
   return (
-    <div className="flex items-center justify-between bg-slate-900/60 backdrop-blur-sm rounded-lg p-3 border border-slate-600/30">
-      <div className="flex items-center gap-3">
-        <div className="bg-gradient-to-r from-slate-600 to-slate-500 text-white px-3 py-1.5 rounded-md font-medium text-sm flex items-center gap-2">
-          <Bot className="w-4 h-4" />
-          <Link href="/">{username}</Link>
+    <div className="flex items-center justify-between bg-white/50 dark:bg-slate-900/70 backdrop-blur-lg rounded-xl p-4 border border-slate-200 dark:border-slate-800/50 h-20">
+      <div className="flex items-center gap-4">
+        <div className="bg-gradient-to-br from-amber-500 to-orange-600 p-3 rounded-lg shadow-lg">
+          <Bot className="w-6 h-6 text-white" />
         </div>
-        <Badge
-          variant="secondary"
-          className={cn(
-            "text-xs",
-            isAutomated
-              ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/25"
-              : "bg-slate-500/15 text-slate-300 border-slate-500/25"
-          )}
-        >
-          <div className={cn(
-            "w-1.5 h-1.5 rounded-full mr-1.5",
-            isAutomated ? "bg-emerald-300" : "bg-slate-400"
-          )}></div>
-          {isAutomated ? "AUTOMATED" : "NOT AUTOMATED"}
-        </Badge>
+        <div>
+          <h1 className="text-xl font-bold text-slate-800 dark:text-slate-100">{username}</h1>
+          <Badge
+            variant="secondary"
+            className={cn(
+              "text-xs font-mono tracking-wider",
+              isAutomated
+                ? "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/25"
+                : "bg-slate-100 text-slate-800 border-slate-200 dark:bg-slate-500/15 dark:text-slate-300 dark:border-slate-500/25"
+            )}
+          >
+            <div className={cn(
+              "w-2 h-2 rounded-full mr-2",
+              isAutomated ? "bg-emerald-500 dark:bg-emerald-400 animate-pulse" : "bg-slate-500 dark:bg-slate-500"
+            )}></div>
+            {isAutomated ? "AUTOMATED" : "NOT AUTOMATED"}
+          </Badge>
+        </div>
       </div>
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
-          size="sm"
-          className="text-slate-400 hover:text-slate-300 h-8 px-2"
+          size="icon"
+          className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full"
           asChild
         >
           <Link href="/threads/delete">
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="w-4 h-4" />
           </Link>
         </Button>
         <Button
           variant="ghost"
-          size="sm"
-          className="text-slate-400 hover:text-slate-300 h-8 px-2"
+          size="icon"
+          className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full"
           asChild
         >
           <Link href="/privacy">
-            <Shield className="w-3 h-3" />
+            <Shield className="w-4 h-4" />
           </Link>
         </Button>
         <Button
           variant="ghost"
-          size="sm"
-          className="text-slate-400 hover:text-slate-300 h-8 px-2"
+          size="icon"
+          className="text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-slate-800/50 rounded-full"
           onClick={onLogout}
         >
-          <LogOut className="w-3 h-3" />
+          <LogOut className="w-4 h-4" />
         </Button>
       </div>
     </div>
